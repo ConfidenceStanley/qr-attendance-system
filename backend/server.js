@@ -51,10 +51,13 @@ app.get("/", (req, res) => {
   });
 });
 
+// ─────────────────────────────────────────────
 // API Routes
+// ─────────────────────────────────────────────
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/admin", require("./routes/adminRoutes")); // ← ONLY NEW LINE ADDED
 
-// Handle undefined routes - FIXED for new Express/path-to-regexp
+// Handle undefined routes
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -79,7 +82,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Connect to MongoDB then Start server
+// Connect to MongoDB then start server
 const PORT = process.env.PORT || 5000;
 
 mongoose
