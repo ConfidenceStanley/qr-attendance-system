@@ -1,0 +1,874 @@
+# Complete Project Roadmap - QR Attendance System
+
+## Pre-Development Setup (Before Any Phase)
+
+```
+TOOLS TO INSTALL ON YOUR COMPUTER:
+├── Node.js (v18+)          → nodejs.org
+├── VS Code                 → code.visualstudio.com
+├── Git                     → git-scm.com
+├── MongoDB Compass         → (GUI to view your database)
+├── Postman                 → (API testing)
+├── Expo Go                 → (Install on your physical phone)
+└── A Gmail Account         → (For email notifications)
+
+ACCOUNTS TO CREATE (ALL FREE):
+├── GitHub                  → github.com
+├── MongoDB Atlas           → mongodb.com/atlas
+├── Render.com              → render.com (backend hosting)
+├── Vercel                  → vercel.com (web frontend hosting)
+└── Expo Account            → expo.dev (mobile app)
+```
+
+---
+
+## GitHub Repository Setup (Do This First)
+
+```
+STEP 1: Create GitHub Account if you dont have one
+        → github.com/signup
+
+STEP 2: Create New Repository
+        → Repository name: qr-attendance-system
+        → Description: QR Code Based Attendance 
+                        Monitoring System
+        → Set to: Public
+        → Check: Add README.md
+        → Check: Add .gitignore (Choose Node)
+        → Click: Create Repository
+
+STEP 3: Create the Folder Structure on GitHub
+        The repo will have 3 main folders:
+        ┌─────────────────────────────┐
+        │   qr-attendance-system/     │
+        │   ├── backend/              │
+        │   ├── web-frontend/         │
+        │   └── mobile-app/           │
+        └─────────────────────────────┘
+
+STEP 4: Clone to your computer
+        → Open terminal/cmd
+        → git clone https://github.com/
+              YOUR_USERNAME/qr-attendance-system.git
+        → cd qr-attendance-system
+
+STEP 5: Create Branch Strategy
+        main        → stable/production code
+        develop     → active development
+        feature/*   → individual features
+
+        Commands:
+        git checkout -b develop
+        git push origin develop
+
+STEP 6: Set develop as default working branch
+        All phases will be built on develop branch
+        Only merge to main when phase is complete
+```
+
+---
+
+## PHASE 1 - Project Foundation & Authentication
+```
+Duration:   Week 1 - Week 2
+Goal:       Working login system for all 3 user 
+            types that can be tested
+```
+
+### Phase 1A - Backend Foundation
+```
+WHAT WE BUILD:
+├── Initialize Node.js + Express project
+├── Connect to MongoDB Atlas
+├── Create User/Student/Lecturer models
+├── Build Authentication API
+│   ├── POST /api/auth/login
+│   ├── POST /api/auth/logout
+│   └── POST /api/auth/change-password
+├── JWT token system
+├── Role-based middleware
+│   ├── isAdmin
+│   ├── isLecturer
+│   └── isStudent
+├── Error handling middleware
+├── Create first Admin account (seed script)
+└── Environment variables setup (.env)
+
+FOLDER STRUCTURE CREATED:
+backend/
+├── config/
+│   ├── db.js
+│   └── cloudConfig.js
+├── controllers/
+│   └── authController.js
+├── middleware/
+│   ├── authMiddleware.js
+│   ├── roleMiddleware.js
+│   └── errorHandler.js
+├── models/
+│   ├── User.js
+│   ├── Student.js
+│   └── Lecturer.js
+├── routes/
+│   └── authRoutes.js
+├── seeders/
+│   └── adminSeeder.js
+├── .env
+├── .gitignore
+├── server.js
+└── package.json
+
+TESTING PHASE 1A (Using Postman):
+├── Test admin login → get JWT token
+├── Test wrong password → get error
+├── Test protected route with token → success
+└── Test protected route without token → blocked
+
+DELIVERABLE:
+✅ Backend authentication working
+✅ Can login as admin via Postman
+✅ JWT tokens working
+✅ MongoDB Atlas connected
+```
+
+### Phase 1B - Web Frontend Authentication
+```
+WHAT WE BUILD:
+├── Initialize React.js project (Vite)
+├── Setup Tailwind CSS
+├── Setup React Router
+├── Setup Redux Toolkit + Auth slice
+├── Setup Axios instance with interceptors
+├── Build Pages:
+│   ├── Login Page (shared for admin & lecturer)
+│   ├── Role-based redirect after login
+│   └── Protected Route wrapper
+├── Build Components:
+│   ├── Navbar
+│   ├── Sidebar (Admin version)
+│   ├── Sidebar (Lecturer version)
+│   └── Loading spinner
+
+FOLDER STRUCTURE CREATED:
+web-frontend/
+├── src/
+│   ├── api/
+│   │   └── axiosInstance.js
+│   ├── components/
+│   │   ├── common/
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── Sidebar.jsx
+│   │   │   └── ProtectedRoute.jsx
+│   ├── pages/
+│   │   └── auth/
+│   │       └── LoginPage.jsx
+│   ├── redux/
+│   │   ├── store.js
+│   │   └── slices/
+│   │       └── authSlice.js
+│   ├── App.jsx
+│   └── main.jsx
+├── .env
+└── package.json
+
+TESTING PHASE 1B (Browser):
+├── Open login page → looks good
+├── Login as admin → redirects to admin dashboard
+├── Login as lecturer → redirects to lecturer dashboard
+├── Wrong password → shows error message
+├── Refresh page → stays logged in (token persists)
+└── Logout → redirects to login
+
+DELIVERABLE:
+✅ Login page working in browser
+✅ Role-based routing working
+✅ Admin and Lecturer can login
+✅ Connected to backend API
+```
+
+### Phase 1C - Mobile App Authentication
+```
+WHAT WE BUILD:
+├── Initialize Expo React Native project
+├── Setup React Navigation (Stack)
+├── Setup Redux Toolkit
+├── Setup Axios instance
+├── Setup AsyncStorage (remember login)
+├── Build Screens:
+│   ├── Splash Screen
+│   ├── Login Screen
+│   └── Protected navigation
+
+FOLDER STRUCTURE CREATED:
+mobile-app/
+├── src/
+│   ├── api/
+│   │   └── axiosInstance.js
+│   ├── screens/
+│   │   ├── SplashScreen.js
+│   │   └── LoginScreen.js
+│   ├── navigation/
+│   │   └── AppNavigator.js
+│   ├── redux/
+│   │   ├── store.js
+│   │   └── slices/
+│   │       └── authSlice.js
+│   └── utils/
+│       └── storage.js
+├── App.js
+└── package.json
+
+TESTING PHASE 1C (Expo Go on Phone):
+├── Open app → see splash screen
+├── Login with student credentials → success
+├── Wrong password → error message shown
+├── Close app and reopen → stays logged in
+└── Logout → back to login screen
+
+DELIVERABLE:
+✅ Mobile app login working on phone
+✅ Student can login via Expo Go
+✅ Connected to backend API
+```
+
+### Phase 1 - Git & Deployment
+```
+GIT WORKFLOW AT END OF PHASE 1:
+├── Commit all Phase 1 code
+│   git add .
+│   git commit -m "Phase 1: Authentication complete 
+│                  for all three platforms"
+│   git push origin develop
+└── Merge develop → main (Phase 1 stable)
+
+DEPLOYMENT AFTER PHASE 1:
+├── Backend → Deploy on Render.com
+│   - Connect GitHub repo
+│   - Set environment variables
+│   - Auto-deploy from main branch
+│   - Get live URL: https://qr-attendance-api.onrender.com
+│
+└── Web Frontend → Deploy on Vercel
+    - Connect GitHub repo
+    - Set VITE_API_URL to Render URL
+    - Get live URL: https://qr-attendance.vercel.app
+
+PHASE 1 COMPLETE CHECKLIST:
+□ Admin can login on web (live URL)
+□ Lecturer can login on web (live URL)
+□ Student can login on mobile app (Expo Go)
+□ All connected to deployed backend
+□ Code pushed to GitHub
+□ README updated with Phase 1 progress
+```
+
+---
+
+## PHASE 2 - Admin Dashboard & User Management
+```
+Duration:   Week 3 - Week 4
+Goal:       Admin can manage all users and courses
+            through the web dashboard
+```
+
+### Phase 2A - Backend (Admin APIs)
+```
+WHAT WE BUILD:
+├── Lecturer Management APIs
+│   ├── POST   /api/admin/lecturers (create)
+│   ├── GET    /api/admin/lecturers (get all)
+│   ├── GET    /api/admin/lecturers/:id (get one)
+│   ├── PUT    /api/admin/lecturers/:id (update)
+│   └── DELETE /api/admin/lecturers/:id (deactivate)
+│
+├── Student Management APIs
+│   ├── POST   /api/admin/students (create + guardian)
+│   ├── GET    /api/admin/students (get all)
+│   ├── GET    /api/admin/students/:id (get one)
+│   ├── PUT    /api/admin/students/:id (update)
+│   └── DELETE /api/admin/students/:id (deactivate)
+│
+├── Course Management APIs
+│   ├── POST   /api/admin/courses (create)
+│   ├── GET    /api/admin/courses (get all)
+│   ├── PUT    /api/admin/courses/:id (update)
+│   ├── DELETE /api/admin/courses/:id (delete)
+│   ├── POST   /api/admin/courses/:id/assign-lecturer
+│   └── POST   /api/admin/courses/:id/assign-students
+│
+├── Updated Models:
+│   ├── Student.js (add guardian fields)
+│   ├── Lecturer.js (complete fields)
+│   └── Course.js (new model)
+│
+└── Send welcome email when account is created
+    (Nodemailer setup here)
+
+TESTING PHASE 2A (Postman):
+├── Create a lecturer → check email received
+├── Create a student with guardian → success
+├── Create a course → success
+├── Assign lecturer to course → success
+├── Assign students to course → success
+├── Get all students list → returns data
+└── Deactivate a user → cant login anymore
+```
+
+### Phase 2B - Admin Web Dashboard
+```
+WHAT WE BUILD:
+├── Admin Dashboard Home Page
+│   ├── Stats cards (Students, Lecturers, Courses)
+│   ├── Recent activity feed
+│   └── Quick action buttons
+│
+├── Lecturer Management Pages
+│   ├── Lecturers List Page (table with search)
+│   ├── Add Lecturer Form (modal or page)
+│   ├── Edit Lecturer Form
+│   └── View Lecturer Details
+│
+├── Student Management Pages
+│   ├── Students List Page (table with search/filter)
+│   ├── Add Student Form (includes guardian section)
+│   ├── Edit Student Form
+│   └── View Student Details
+│
+├── Course Management Pages
+│   ├── Courses List Page
+│   ├── Create Course Form
+│   ├── Edit Course Form
+│   ├── Assign Lecturer to Course
+│   └── Assign Students to Course (multi-select)
+│
+└── Reusable Components Built:
+    ├── DataTable (sortable, searchable)
+    ├── Modal component
+    ├── Form Input components
+    ├── Confirm Delete Dialog
+    ├── Toast notifications
+    └── Pagination component
+
+TESTING PHASE 2B (Browser):
+├── Admin logs in → sees dashboard with stats
+├── Add new lecturer → appears in list + email sent
+├── Add new student with guardian info → success
+├── Create new course → appears in list
+├── Assign lecturer to course → reflected
+├── Assign multiple students to course → reflected
+├── Search for a student → filters correctly
+├── Edit student details → updates saved
+└── Deactivate account → user cannot login
+```
+
+### Phase 2 - Git & Deployment
+```
+GIT WORKFLOW:
+├── git add .
+├── git commit -m "Phase 2: Admin dashboard 
+│                  and user management complete"
+└── git push origin develop → merge to main
+
+DEPLOYMENT:
+├── Backend auto-deploys to Render (GitHub connected)
+└── Web Frontend auto-deploys to Vercel (GitHub connected)
+
+PHASE 2 COMPLETE CHECKLIST:
+□ Admin can add/edit/delete lecturers
+□ Admin can add/edit/delete students
+□ Admin can create and assign courses
+□ Guardian details saved with student
+□ Welcome emails sent on account creation
+□ All working on live deployed URLs
+□ Code on GitHub
+```
+
+---
+
+## PHASE 3 - Lecturer Dashboard & QR Session Management
+```
+Duration:   Week 5 - Week 6
+Goal:       Lecturer can create sessions, generate
+            rotating QR codes and monitor attendance
+            in real-time
+```
+
+### Phase 3A - Backend (Session & QR APIs)
+```
+WHAT WE BUILD:
+├── Attendance Session APIs
+│   ├── POST /api/lecturer/sessions (create session)
+│   ├── GET  /api/lecturer/sessions (my sessions)
+│   ├── GET  /api/lecturer/sessions/:id (session details)
+│   ├── PUT  /api/lecturer/sessions/:id/close
+│   └── GET  /api/lecturer/sessions/:id/attendance
+│
+├── QR Code Service
+│   ├── Generate unique token (UUID v4 + HMAC)
+│   ├── Encode session data into QR
+│   ├── Token expires every 15 seconds
+│   ├── Store active token in memory/DB
+│   └── Rotate token automatically
+│
+├── Socket.io Setup
+│   ├── Lecturer joins session room
+│   ├── Emit real-time student scan events
+│   └── Emit QR rotation events
+│
+├── New Models:
+│   ├── AttendanceSession.js
+│   └── AttendanceRecord.js
+│
+└── Lecturer Dashboard Stats API
+    └── GET /api/lecturer/dashboard
+
+TESTING PHASE 3A (Postman + Socket test):
+├── Create session → returns session + first QR token
+├── Verify QR token changes every 15 seconds
+├── Close session → status changes to closed
+├── Get session attendance → returns list
+└── Socket connection works
+```
+
+### Phase 3B - Lecturer Web Dashboard
+```
+WHAT WE BUILD:
+├── Lecturer Dashboard Home
+│   ├── My courses summary
+│   ├── Today's sessions
+│   └── Recent attendance stats
+│
+├── Session Management Page
+│   ├── Create Session Form
+│   │   ├── Select Course dropdown
+│   │   ├── Topic input
+│   │   └── Duration setting
+│   │
+│   ├── QR Code Display Page (KEY FEATURE)
+│   │   ├── Large QR code in center
+│   │   ├── Countdown timer (15s refresh)
+│   │   ├── QR auto-rotates visually
+│   │   ├── Session info displayed
+│   │   ├── "Students Scanned: X/Y" counter
+│   │   ├── Live attendance list below QR
+│   │   │   (updates without page refresh)
+│   │   └── Close Session button
+│   │
+│   └── Past Sessions List
+│
+├── My Courses Page
+│   ├── List of assigned courses
+│   └── Click course → see all sessions
+│
+├── Attendance Records Page
+│   ├── Filter by course and date
+│   ├── See present/absent per session
+│   └── Edit individual record (manual override)
+│
+└── Socket.io Client Setup
+    ├── Connect to session room
+    └── Update UI when student scans
+
+TESTING PHASE 3B (Browser):
+├── Lecturer logs in → sees their courses only
+├── Create session for CSC 301 → success
+├── QR code page opens → QR displayed
+├── QR code visually changes every 15 seconds
+├── Session counter shows 0 students
+├── View past sessions → history shown
+└── Close session → session marked closed
+```
+
+### Phase 3 - Git & Deployment
+```
+GIT WORKFLOW:
+├── git commit -m "Phase 3: Session management 
+│                  and rotating QR code complete"
+└── git push → auto-deploys
+
+PHASE 3 COMPLETE CHECKLIST:
+□ Lecturer can create attendance session
+□ QR code generated and displayed
+□ QR rotates every 15 seconds automatically
+□ Session can be closed
+□ Real-time counter shows on screen
+□ Socket.io connected
+□ Deployed and working live
+□ Code on GitHub
+```
+
+---
+
+## PHASE 4 - Student Mobile App & QR Scanning
+```
+Duration:   Week 7 - Week 8
+Goal:       Student can scan QR code on mobile app
+            and attendance is marked in real-time
+```
+
+### Phase 4A - Backend (Attendance Scanning API)
+```
+WHAT WE BUILD:
+├── QR Scan & Validation API
+│   └── POST /api/student/scan
+│       Validates:
+│       ├── Token signature valid (HMAC check)
+│       ├── Token not expired (15 second window)
+│       ├── Session is still active
+│       ├── Student is enrolled in the course
+│       └── Student hasn't scanned this session yet
+│
+├── Student Data APIs
+│   ├── GET /api/student/dashboard
+│   ├── GET /api/student/courses
+│   ├── GET /api/student/attendance
+│   └── GET /api/student/attendance/:courseId
+│
+└── After successful scan:
+    ├── Save attendance record
+    ├── Emit socket event to lecturer
+    └── Return success response to student
+
+TESTING PHASE 4A (Postman):
+├── Scan with valid token → marked present
+├── Scan same session again → error "already marked"
+├── Scan with expired token → error "QR expired"
+├── Scan for course not enrolled → error
+├── Check lecturer dashboard updates via socket
+└── Get student attendance history → returns data
+```
+
+### Phase 4B - Student Mobile App Screens
+```
+WHAT WE BUILD:
+├── Home/Dashboard Screen
+│   ├── Welcome message with student name
+│   ├── Overall attendance percentage (big display)
+│   ├── Course-by-course attendance bars
+│   └── Recent scan history (last 5)
+│
+├── QR Scanner Screen (KEY FEATURE)
+│   ├── Camera viewfinder opens
+│   ├── Scan guide overlay (box in center)
+│   ├── Point at QR on lecturer screen
+│   ├── Processing animation while validating
+│   ├── SUCCESS screen:
+│   │   ├── Green checkmark animation
+│   │   ├── Course name confirmed
+│   │   └── Time of marking
+│   └── ERROR screen:
+│       ├── Red X animation
+│       └── Error message (expired/already marked)
+│
+├── My Courses Screen
+│   ├── List of registered courses
+│   ├── Attendance % badge per course
+│   └── Color coded (green >75%, red <75%)
+│
+├── Attendance History Screen
+│   ├── Filter by course
+│   ├── List of all classes
+│   ├── Present (✅) / Absent (❌) per class
+│   └── Date and time of each session
+│
+└── Profile Screen
+    ├── Student details
+    └── Logout button
+
+TESTING PHASE 4B (Expo Go on Phone):
+├── Student logs into mobile app
+├── Dashboard shows courses and percentage
+├── Tap Scan → camera opens
+├── Point at QR code on laptop screen
+├── See success animation → attendance marked
+├── Check lecturer web app → student name appears
+├── Try scanning same QR again → error shown
+├── Try scanning old QR screenshot → error shown
+├── View attendance history → shows record
+└── View course attendance % → updated
+```
+
+### Phase 4 - Git & Deployment
+```
+GIT WORKFLOW:
+├── git commit -m "Phase 4: Student mobile app 
+│                  and QR scanning complete"
+└── git push → auto-deploys
+
+EXPO DEPLOYMENT:
+├── expo publish (for testing via Expo Go)
+└── Anyone with Expo Go can test with your link
+
+PHASE 4 COMPLETE CHECKLIST:
+□ Student can open mobile app
+□ Camera opens and scans QR
+□ Attendance marked successfully
+□ Real-time update on lecturer screen
+□ Duplicate scan prevented
+□ Expired QR rejected
+□ Attendance history visible on app
+□ Code on GitHub
+□ Expo published for testing
+```
+
+---
+
+## PHASE 5 - Reports, Notifications & Threshold Alerts
+```
+Duration:   Week 9 - Week 10
+Goal:       Complete notification system and 
+            downloadable reports in PDF and CSV
+```
+
+### Phase 5A - Backend (Notifications & Reports)
+```
+WHAT WE BUILD:
+├── Email Notification Service (Nodemailer + Gmail)
+│   ├── Welcome email (account created)
+│   ├── Absence alert to guardian
+│   └── Low attendance threshold alert to guardian
+│
+├── Notification Trigger Logic
+│   ├── Trigger when session closes
+│   ├── Find all absent students
+│   ├── Send guardian email for each absent student
+│   ├── Calculate attendance % per course
+│   └── Send threshold alert if below 75%
+│
+├── Report Generation Service
+│   ├── PDF Reports (pdfkit)
+│   │   ├── Session attendance report
+│   │   ├── Course attendance report
+│   │   └── Full department report (admin)
+│   └── CSV Reports (csv-writer)
+│       ├── Same report types as PDF
+│       └── Downloadable spreadsheet format
+│
+└── Report APIs
+    ├── GET /api/lecturer/reports/session/:id
+    ├── GET /api/lecturer/reports/course/:id
+    ├── GET /api/admin/reports/department
+    └── All support ?format=pdf or ?format=csv
+
+TESTING PHASE 5A (Postman + Email):
+├── Close a session with absent students
+├── Check guardian email received
+├── Check threshold email when % drops below 75
+├── Download PDF report → opens correctly
+├── Download CSV report → opens in Excel
+└── Admin downloads full department report
+```
+
+### Phase 5B - Reports UI (Web Frontend)
+```
+WHAT WE BUILD:
+├── Lecturer Reports Page
+│   ├── Select course and date range
+│   ├── See attendance table/chart
+│   ├── Download PDF button
+│   ├── Download CSV button
+│   └── Per-student attendance summary
+│
+├── Admin Reports Page
+│   ├── Department overview report
+│   ├── Filter by course / lecturer / level
+│   ├── Attendance charts (bar/pie)
+│   ├── Download PDF button
+│   └── Download CSV button
+│
+├── Charts and Visualizations
+│   ├── Attendance trend over time (line chart)
+│   ├── Per course comparison (bar chart)
+│   └── Present vs Absent pie chart
+│
+└── Notification Settings (Admin)
+    └── Set attendance threshold % (default 75%)
+
+TESTING PHASE 5B (Browser):
+├── Close a session → guardian gets email
+├── Lecturer clicks download PDF → file downloads
+├── Lecturer clicks download CSV → file downloads
+├── Open CSV in Excel → data correct
+├── Open PDF → formatted correctly
+├── Admin sees full department report
+└── Charts load and display correctly
+```
+
+### Phase 5C - Student Notification (Mobile)
+```
+WHAT WE BUILD:
+├── In-app notification when:
+│   ├── Attendance successfully marked
+│   └── Attendance percentage drops below threshold
+│
+└── Update Dashboard to show:
+    ├── Warning badge if attendance below 75%
+    └── Color coded percentage display
+
+TESTING PHASE 5C:
+├── Drop attendance below 75%
+├── See warning on student dashboard
+├── Guardian receives email
+└── Notification shows correctly
+```
+
+### Phase 5 - Git & Deployment
+```
+GIT WORKFLOW:
+├── git commit -m "Phase 5: Reports, notifications 
+│                  and threshold alerts complete"
+└── git push → auto-deploys
+
+PHASE 5 COMPLETE CHECKLIST:
+□ Guardian receives email when student absent
+□ Guardian receives email when below threshold
+□ Lecturer can download PDF report
+□ Lecturer can download CSV report
+□ Admin can download department report
+□ Charts show on web dashboard
+□ Student sees warning on low attendance
+□ Code on GitHub
+□ All live and working on deployed URLs
+```
+
+---
+
+## PHASE 6 - Testing, Polish & Final Deployment
+```
+Duration:   Week 11 - Week 12
+Goal:       System is bug-free, looks professional,
+            fully deployed and ready for presentation
+```
+
+### Phase 6A - System Testing
+```
+TESTING TYPES:
+
+1. FUNCTIONAL TESTING
+   Test every feature works as expected
+   ├── All login types work
+   ├── Admin can manage all users
+   ├── Lecturer can run full session
+   ├── Student can scan and see history
+   ├── Reports download correctly
+   └── Notifications send correctly
+
+2. ANTI-PROXY TESTING
+   ├── Screenshot QR → scan after 15s → FAILS ✅
+   ├── Scan same session twice → FAILS ✅
+   ├── Scan for unenrolled course → FAILS ✅
+   └── Use another student account → FAILS ✅
+
+3. ROLE TESTING  
+   ├── Student cannot access admin routes
+   ├── Lecturer cannot access admin routes
+   └── Admin can access everything
+
+4. EDGE CASE TESTING
+   ├── What if session closes while scanning?
+   ├── What if internet drops during scan?
+   ├── What if no students enrolled in course?
+   └── What if guardian email is wrong?
+```
+
+### Phase 6B - UI Polish & Responsiveness
+```
+WHAT WE IMPROVE:
+├── Web Frontend
+│   ├── Make fully responsive (tablet friendly)
+│   ├── Loading states on all buttons
+│   ├── Empty states (no data messages)
+│   ├── Error boundaries
+│   ├── Consistent color scheme throughout
+│   └── Print-friendly report pages
+│
+└── Mobile App
+    ├── Smooth animations on scan
+    ├── Better error messages
+    ├── Loading indicators
+    └── Offline message if no internet
+```
+
+### Phase 6C - Final Deployment & Documentation
+```
+FINAL DEPLOYMENT CHECKLIST:
+├── Backend on Render.com
+│   ├── All env variables set correctly
+│   ├── MongoDB Atlas connected (production)
+│   └── Auto-deploy from main branch
+│
+├── Web Frontend on Vercel
+│   ├── Production build tested
+│   ├── API URL pointing to Render backend
+│   └── Auto-deploy from main branch
+│
+└── Mobile App on Expo
+    ├── expo publish (shareable link)
+    └── Test on Android and iOS via Expo Go
+
+DOCUMENTATION TO WRITE:
+├── README.md (on GitHub)
+│   ├── Project description
+│   ├── Tech stack list
+│   ├── Setup instructions
+│   ├── How to run locally
+│   └── Live demo links
+│
+└── In your project writeup:
+    ├── System architecture diagram
+    ├── Database schema
+    ├── API documentation
+    └── User manual (screenshots)
+
+FINAL GIT:
+├── git commit -m "Phase 6: Final testing, 
+│                  polish and deployment"
+├── git push origin develop
+├── Merge develop → main
+└── Tag release: git tag v1.0.0
+```
+
+---
+
+## Complete Timeline Summary
+
+```
+┌──────────┬─────────────────────────────────┬──────────┐
+│  Phase   │         What Gets Built          │  Weeks   │
+├──────────┼─────────────────────────────────┼──────────┤
+│ Pre-Dev  │ Tools, accounts, GitHub repo     │ Day 1    │
+├──────────┼─────────────────────────────────┼──────────┤
+│ Phase 1  │ Authentication (all 3 platforms) │ Week 1-2 │
+├──────────┼─────────────────────────────────┼──────────┤
+│ Phase 2  │ Admin dashboard + user mgmt      │ Week 3-4 │
+├──────────┼─────────────────────────────────┼──────────┤
+│ Phase 3  │ Lecturer dashboard + QR gen      │ Week 5-6 │
+├──────────┼─────────────────────────────────┼──────────┤
+│ Phase 4  │ Student mobile + QR scanning     │ Week 7-8 │
+├──────────┼─────────────────────────────────┼──────────┤
+│ Phase 5  │ Reports + notifications          │ Week 9-10│
+├──────────┼─────────────────────────────────┼──────────┤
+│ Phase 6  │ Testing + polish + deployment    │ Week11-12│
+└──────────┴─────────────────────────────────┴──────────┘
+Total Duration: 12 Weeks (3 Months)
+```
+
+---
+
+## What You Have After Each Phase
+
+```
+After Phase 1 → Working login system (live URL)
+After Phase 2 → Admin can manage the whole system
+After Phase 3 → Lecturer can generate QR codes
+After Phase 4 → Full attendance cycle working end-to-end
+After Phase 5 → Complete system with reports & alerts
+After Phase 6 → Polished, tested, presentable system
+```
+
+---
+
+> **Ready to start?** 
+> Just say **"Let's begin Phase 1"** and we will start 
+> writing the actual code, file by file, starting with 
+> the **backend setup → web frontend → mobile app**
