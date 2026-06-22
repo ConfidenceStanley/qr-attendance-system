@@ -19,7 +19,6 @@ const createCourse = async (req, res) => {
       academicSession,
     } = req.body;
 
-    // Validate required fields
     if (
       !courseCode ||
       !courseTitle ||
@@ -34,7 +33,15 @@ const createCourse = async (req, res) => {
       });
     }
 
-    // Check course code not already used
+    // Validate level matches Student/Lecturer enum
+    const validLevels = ["ND1", "ND2", "HND1", "HND2"];
+    if (!validLevels.includes(level)) {
+      return res.status(400).json({
+        success: false,
+        message: `Level must be one of: ${validLevels.join(", ")}`,
+      });
+    }
+
     const existing = await Course.findOne({
       courseCode: courseCode.toUpperCase(),
     });
@@ -62,10 +69,19 @@ const createCourse = async (req, res) => {
     });
   } catch (error) {
     console.error("Create course error:", error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Course code already exists",
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: "Server error while creating course",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      error:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -80,7 +96,6 @@ const getAllCourses = async (req, res) => {
     const { search, level, semester } = req.query;
 
     let filter = {};
-
     if (level) filter.level = level;
     if (semester) filter.semester = semester;
     if (search) {
@@ -95,12 +110,13 @@ const getAllCourses = async (req, res) => {
         path: "lecturer",
         populate: {
           path: "user",
-          select: "firstName lastName email",
+          select: "fullName email",
         },
       })
-      .sort({ courseCode: 1 }); // Sort alphabetically by code
+      .sort({ courseCode: 1 });
 
     // Format with lecturer name and student count
+    // IMPORTANT: use fullName (matches User.js) not firstName/lastName
     const formatted = courses.map((course) => ({
       id: course._id,
       courseCode: course.courseCode,
@@ -115,8 +131,9 @@ const getAllCourses = async (req, res) => {
       lecturer: course.lecturer
         ? {
             id: course.lecturer._id,
-            name: `${course.lecturer.user?.firstName} ${course.lecturer.user?.lastName}`,
+            fullName: course.lecturer.user?.fullName,  // ✅ fullName
             email: course.lecturer.user?.email,
+            staffId: course.lecturer.staffId,
           }
         : null,
       createdAt: course.createdAt,
@@ -146,11 +163,11 @@ const getCourseById = async (req, res) => {
     const course = await Course.findById(req.params.id)
       .populate({
         path: "lecturer",
-        populate: { path: "user", select: "firstName lastName email" },
+        populate: { path: "user", select: "fullName email" },
       })
       .populate({
         path: "students",
-        populate: { path: "user", select: "firstName lastName email" },
+        populate: { path: "user", select: "fullName email" },
       });
 
     if (!course) {
@@ -175,15 +192,16 @@ const getCourseById = async (req, res) => {
         lecturer: course.lecturer
           ? {
               id: course.lecturer._id,
-              name: `${course.lecturer.user?.firstName} ${course.lecturer.user?.lastName}`,
+              fullName: course.lecturer.user?.fullName,
               email: course.lecturer.user?.email,
+              staffId: course.lecturer.staffId,
             }
           : null,
         students: course.students.map((s) => ({
           id: s._id,
-          name: `${s.user?.firstName} ${s.user?.lastName}`,
+          fullName: s.user?.fullName,         // ✅ fullName
           email: s.user?.email,
-          matricNumber: s.matricNumber,
+          studentId: s.studentId,             // ✅ studentId
         })),
         studentCount: course.students.length,
       },
@@ -222,7 +240,17 @@ const updateCourse = async (req, res) => {
       });
     }
 
-    // Update only provided fields
+    // Validate level if provided
+    if (level) {
+      const validLevels = ["ND1", "ND2", "HND1", "HND2"];
+      if (!validLevels.includes(level)) {
+        return res.status(400).json({
+          success: false,
+          message: `Level must be one of: ${validLevels.join(", ")}`,
+        });
+      }
+    }
+
     if (courseTitle) course.courseTitle = courseTitle;
     if (creditUnits) course.creditUnits = creditUnits;
     if (level) course.level = level;
@@ -248,11 +276,9 @@ const updateCourse = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────
-// @desc    Delete course
+// @desc    Deactivate course (soft delete)
 // @route   DELETE /api/admin/courses/:id
 // @access  Admin only
-// Note:    Hard delete only if no attendance
-//          sessions exist for this course
 // ─────────────────────────────────────────────
 const deleteCourse = async (req, res) => {
   try {
@@ -264,8 +290,6 @@ const deleteCourse = async (req, res) => {
       });
     }
 
-    // For now we soft delete (deactivate)
-    // In Phase 3 we will check for active sessions
     course.isActive = false;
     await course.save();
 
@@ -291,16 +315,16 @@ const deleteCourse = async (req, res) => {
 const assignLecturer = async (req, res) => {
   try {
     const { lecturerId } = req.body;
+    const courseId = req.params.id;
 
     if (!lecturerId) {
       return res.status(400).json({
         success: false,
-        message: "Lecturer ID is required",
+        message: "lecturerId is required",
       });
     }
 
-    // Verify course exists
-    const course = await Course.findById(req.params.id);
+    const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -308,10 +332,9 @@ const assignLecturer = async (req, res) => {
       });
     }
 
-    // Verify lecturer exists
     const lecturer = await Lecturer.findById(lecturerId).populate(
       "user",
-      "firstName lastName"
+      "fullName"
     );
     if (!lecturer) {
       return res.status(404).json({
@@ -320,19 +343,43 @@ const assignLecturer = async (req, res) => {
       });
     }
 
-    // Assign lecturer to course
+    // Remove course from previous lecturer's courses array if changing
+    if (
+      course.lecturer &&
+      course.lecturer.toString() !== lecturerId
+    ) {
+      await Lecturer.findByIdAndUpdate(course.lecturer, {
+        $pull: { courses: courseId },
+      });
+    }
+
+    // Assign new lecturer to course
     course.lecturer = lecturerId;
     await course.save();
 
+    // Add course to new lecturer's courses array
+    await Lecturer.findByIdAndUpdate(lecturerId, {
+      $addToSet: { courses: courseId },
+    });
+
+    // Return populated course data
+    const updatedCourse = await Course.findById(courseId).populate({
+      path: "lecturer",
+      populate: { path: "user", select: "fullName email" },
+    });
+
     res.status(200).json({
       success: true,
-      message: `${lecturer.user.firstName} ${lecturer.user.lastName} 
-                assigned to ${course.courseCode} successfully`,
+      message: `${lecturer.user.fullName} assigned to ${course.courseCode} successfully`,
       data: {
-        courseId: course._id,
-        courseCode: course.courseCode,
-        lecturerId: lecturer._id,
-        lecturerName: `${lecturer.user.firstName} ${lecturer.user.lastName}`,
+        courseId: updatedCourse._id,
+        courseCode: updatedCourse.courseCode,
+        lecturer: {
+          id: updatedCourse.lecturer._id,
+          fullName: updatedCourse.lecturer.user?.fullName,
+          email: updatedCourse.lecturer.user?.email,
+          staffId: updatedCourse.lecturer.staffId,
+        },
       },
     });
   } catch (error) {
@@ -349,21 +396,22 @@ const assignLecturer = async (req, res) => {
 // @route   POST /api/admin/courses/:id/assign-students
 // @access  Admin only
 // Body:    { studentIds: ["id1", "id2", ...] }
-// Note:    This ADDS students to existing list
-//          Does not replace - use to add more
 // ─────────────────────────────────────────────
 const assignStudents = async (req, res) => {
   try {
     const { studentIds } = req.body;
 
-    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+    if (
+      !studentIds ||
+      !Array.isArray(studentIds) ||
+      studentIds.length === 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "studentIds array is required and cannot be empty",
       });
     }
 
-    // Verify course exists
     const course = await Course.findById(req.params.id);
     if (!course) {
       return res.status(404).json({
@@ -372,7 +420,6 @@ const assignStudents = async (req, res) => {
       });
     }
 
-    // Verify all student IDs exist
     const students = await Student.find({ _id: { $in: studentIds } });
     if (students.length !== studentIds.length) {
       return res.status(400).json({
@@ -381,12 +428,18 @@ const assignStudents = async (req, res) => {
       });
     }
 
-    // Add students without duplicates
-    // $addToSet only adds if not already in the array
+    // Add students to course (no duplicates)
     const updatedCourse = await Course.findByIdAndUpdate(
       req.params.id,
       { $addToSet: { students: { $each: studentIds } } },
       { new: true }
+    );
+
+    // IMPORTANT: Also add course to each student's courses array
+    // This makes courseCount work on Students page
+    await Student.updateMany(
+      { _id: { $in: studentIds } },
+      { $addToSet: { courses: req.params.id } }
     );
 
     res.status(200).json({
@@ -415,7 +468,9 @@ const assignStudents = async (req, res) => {
 // ─────────────────────────────────────────────
 const removeStudent = async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id);
+    const { id: courseId, studentId } = req.params;
+
+    const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -423,9 +478,14 @@ const removeStudent = async (req, res) => {
       });
     }
 
-    // $pull removes the specific studentId from array
-    await Course.findByIdAndUpdate(req.params.id, {
-      $pull: { students: req.params.studentId },
+    // Remove student from course
+    await Course.findByIdAndUpdate(courseId, {
+      $pull: { students: studentId },
+    });
+
+    // Also remove course from student's courses array
+    await Student.findByIdAndUpdate(studentId, {
+      $pull: { courses: courseId },
     });
 
     res.status(200).json({

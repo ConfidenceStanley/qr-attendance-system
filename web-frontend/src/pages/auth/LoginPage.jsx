@@ -41,12 +41,6 @@ const LoginPage = () => {
     if (token && user) redirectByRole(user.role);
   }, [token, user]);
 
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      dispatch(clearError());
-    }
-  }, [error]);
 
   const redirectByRole = (role) => {
     if (role === "admin") navigate("/admin/dashboard");
@@ -57,20 +51,59 @@ const LoginPage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // const handleSubmit = async (e) => {
+  // e.preventDefault();
+
+  // if (!formData.email || !formData.password) {
+  //   toast.error("Please fill in all fields", { duration: 4000 });
+  //   return;
+  // }
+
+  // const result = await dispatch(loginUser(formData));
+  //   if (loginUser.fulfilled.match(result)) {
+  //     toast.success("Welcome back!");
+  //     redirectByRole(result.payload.user.role);
+  //   } else {
+  //     toast.error(result.payload || "Login failed. Please try again.", {
+  //       duration: 4000,
+  //     });
+  //     dispatch(clearError());
+  //   }
+  // };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.email || !formData.password) {
-      toast.error("Please fill in all fields");
-      return;
-    }
+  e.preventDefault();      // FIRST line
+  e.stopPropagation();     // ADD this too just in case
+
+  console.log("Submit clicked"); // debug log
+
+  if (!formData.email || !formData.password) {
+    toast.error("Please fill in all fields", { duration: 4000 });
+    return;
+  }
+
+  try {
     const result = await dispatch(loginUser(formData));
+
+    console.log("Login result:", result); // debug log
+
     if (loginUser.fulfilled.match(result)) {
       toast.success("Welcome back!");
       redirectByRole(result.payload.user.role);
+    } else {
+      toast.error(
+        result.payload || "Login failed. Please check your credentials.",
+        { duration: 4000 }
+      );
+      dispatch(clearError());
     }
-  };
+  } catch (err) {
+    console.error("Login error:", err);
+    toast.error("Something went wrong", { duration: 4000 });
+  }
+};
 
-  return (
+return (
     <div
       style={{
         minHeight: "100vh",

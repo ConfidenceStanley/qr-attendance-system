@@ -6,8 +6,83 @@ const generateToken = require("../utils/generateToken");
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
+// const login = async (req, res, next) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     if (!email || !password) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Please provide email and password",
+//       });
+//     }
+
+//     const user = await User.findOne({ email }).select("+password");
+
+//     if (!user) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Invalid email or password",
+//       });
+//     }
+
+//     if (!user.isActive) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Your account has been deactivated. Contact admin",
+//       });
+//     }
+
+//     const isMatch = await user.matchPassword(password);
+
+//     if (!isMatch) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Invalid email or password",
+//       });
+//     }
+
+//     user.lastLogin = new Date();
+//     await user.save({ validateBeforeSave: false });
+
+//     let profileData = null;
+
+//     if (user.role === "student") {
+//       profileData = await Student.findOne({ user: user._id }).populate(
+//         "courses",
+//         "courseCode courseTitle"
+//       );
+//     } else if (user.role === "lecturer") {
+//       profileData = await Lecturer.findOne({ user: user._id }).populate(
+//         "courses",
+//         "courseCode courseTitle"
+//       );
+//     }
+
+//     const token = generateToken(user._id, user.role);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Login successful",
+//       token,
+//       user: {
+//         id: user._id,
+//         fullName: user.fullName,
+//         email: user.email,
+//         role: user.role,
+//         profile: profileData,
+//       },
+//     });
+//   } catch (error) {
+//     return next(error);
+//   }
+// };
+
 const login = async (req, res, next) => {
   try {
+    console.log("─── LOGIN ATTEMPT ───");
+    console.log("Body received:", req.body);
+
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -18,6 +93,7 @@ const login = async (req, res, next) => {
     }
 
     const user = await User.findOne({ email }).select("+password");
+    console.log("User found:", user ? "YES" : "NO");
 
     if (!user) {
       return res.status(401).json({
@@ -25,6 +101,9 @@ const login = async (req, res, next) => {
         message: "Invalid email or password",
       });
     }
+
+    console.log("User role:", user.role);
+    console.log("User active:", user.isActive);
 
     if (!user.isActive) {
       return res.status(401).json({
@@ -34,6 +113,7 @@ const login = async (req, res, next) => {
     }
 
     const isMatch = await user.matchPassword(password);
+    console.log("Password match:", isMatch);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -44,22 +124,28 @@ const login = async (req, res, next) => {
 
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
+    console.log("Last login updated");
 
     let profileData = null;
 
     if (user.role === "student") {
+      console.log("Fetching student profile...");
       profileData = await Student.findOne({ user: user._id }).populate(
         "courses",
         "courseCode courseTitle"
       );
+      console.log("Student profile found:", profileData ? "YES" : "NO");
     } else if (user.role === "lecturer") {
+      console.log("Fetching lecturer profile...");
       profileData = await Lecturer.findOne({ user: user._id }).populate(
         "courses",
         "courseCode courseTitle"
       );
+      console.log("Lecturer profile found:", profileData ? "YES" : "NO");
     }
 
     const token = generateToken(user._id, user.role);
+    console.log("Token generated");
 
     return res.status(200).json({
       success: true,
@@ -74,6 +160,12 @@ const login = async (req, res, next) => {
       },
     });
   } catch (error) {
+    // LOG THE FULL ERROR HERE
+    console.error("─── LOGIN ERROR ───");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Full stack:", error.stack);
+    console.error("──────────────────");
     return next(error);
   }
 };

@@ -8,11 +8,22 @@ import { Provider } from "react-redux";
 import { Toaster } from "react-hot-toast";
 import store from "./redux/store";
 
+// Public pages
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/auth/LoginPage";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import LecturerDashboard from "./pages/lecturer/LecturerDashboard";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
+
+// Admin pages
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import LecturersPage from "./pages/admin/LecturersPage";
+import StudentsPage from "./pages/admin/StudentsPage";
+import CoursesPage from "./pages/admin/CoursesPage";
+
+// Lecturer
+import LecturerDashboard from "./pages/lecturer/LecturerDashboard";
+
+// Common
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
 function App() {
@@ -35,19 +46,33 @@ function App() {
           }}
         />
         <Routes>
+          {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
+          {/* Admin routes - all wrapped by AdminLayout */}
+          {/* AdminLayout provides sidebar + navbar for every admin page */}
           <Route
-            path="/admin/dashboard"
+            path="/admin"
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminDashboard />
+                <AdminLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            {/* These render inside AdminLayout's <Outlet /> */}
+            <Route
+              index
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="lecturers" element={<LecturersPage />} />
+            <Route path="students" element={<StudentsPage />} />
+            <Route path="courses" element={<CoursesPage />} />
+          </Route>
 
+          {/* Lecturer routes */}
           <Route
             path="/lecturer/dashboard"
             element={
@@ -57,6 +82,7 @@ function App() {
             }
           />
 
+          {/* Catch all - redirect to landing */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

@@ -21,11 +21,18 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Handle token expiry
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const isLoginRequest = error.config?.url?.includes("/auth/login");
+    const hadToken = !!localStorage.getItem("token");
+
+    if (
+      error.response &&
+      error.response.status === 401 &&
+      hadToken &&
+      !isLoginRequest
+    ) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";
@@ -33,5 +40,6 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default axiosInstance;

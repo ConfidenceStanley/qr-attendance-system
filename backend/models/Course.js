@@ -27,7 +27,6 @@ const courseSchema = new mongoose.Schema(
     level: {
       type: String,
       required: [true, "Level is required"],
-      // Matches your Student model enum exactly
       enum: ["ND1", "ND2", "HND1", "HND2"],
     },
 
@@ -44,14 +43,12 @@ const courseSchema = new mongoose.Schema(
       default: "Computer Science",
     },
 
-    // One lecturer per course
     lecturer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Lecturer",
       default: null,
     },
 
-    // Many students per course
     students: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -68,7 +65,6 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: [true, "Academic session is required"],
       trim: true,
-      // Example: "2024/2025"
     },
   },
   {
@@ -76,9 +72,10 @@ const courseSchema = new mongoose.Schema(
   }
 );
 
-// Virtual: student count without fetching full array
+// Virtual field - safe student count
+// Returns 0 if students array not populated
 courseSchema.virtual("studentCount").get(function () {
-  return this.students.length;
+  return this.students ? this.students.length : 0;
 });
 
 courseSchema.set("toJSON", { virtuals: true });
