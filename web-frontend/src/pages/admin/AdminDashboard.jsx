@@ -20,17 +20,17 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   const { user } = useSelector((state) => state.auth);
+const lecturerState = useSelector((state) => state.lecturers);
+const studentState  = useSelector((state) => state.students);
+const courseState   = useSelector((state) => state.courses);
 
-  // Get real data from Redux state
-  const { list: lecturers, isLoading: lecturersLoading } = useSelector(
-    (state) => state.lecturers
-  );
-  const { list: students, isLoading: studentsLoading } = useSelector(
-    (state) => state.students
-  );
-  const { list: courses, isLoading: coursesLoading } = useSelector(
-    (state) => state.courses
-  );
+const lecturers       = lecturerState?.list        ?? [];
+const lecturersLoading = lecturerState?.isLoading  ?? false;
+const students        = studentState?.list         ?? [];
+const studentsLoading  = studentState?.isLoading   ?? false;
+const courses         = courseState?.list          ?? [];
+const coursesLoading   = courseState?.isLoading    ?? false;
+
 
   const c = {
     primary: "#4f46e5",
