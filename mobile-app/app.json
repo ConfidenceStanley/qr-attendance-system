@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "QRoll",
+    "slug": "qroll",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4f46e5"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.qroll.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "QRoll needs camera access to scan attendance QR codes.",
+        "NSLocationWhenInUseUsageDescription": "QRoll needs your location to verify you are in the classroom."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4f46e5"
+      },
+      "package": "com.qroll.app",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "QRoll needs camera access to scan attendance QR codes."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "QRoll needs your location to verify you are in the classroom."
+        }
+      ]
+    ]
+  }
+}

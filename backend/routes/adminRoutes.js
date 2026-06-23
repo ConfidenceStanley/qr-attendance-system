@@ -33,6 +33,8 @@ const {
   removeStudent,
 } = require("../controllers/adminCourseController");
 
+const { resetUserPassword } = require("../controllers/adminPasswordController");
+
 // All routes below require login + admin role
 // protect → checks JWT token is valid
 // authorize("admin") → checks role is admin
@@ -69,6 +71,8 @@ router.route("/students/:id")
 router.route("/courses")
   .get(getAllCourses)         // GET  /api/admin/courses
   .post(createCourse);       // POST /api/admin/courses
+
+router.post("/users/:userId/reset-password", resetUserPassword);
 
 router.route("/courses/:id")
   .get(getCourseById)        // GET    /api/admin/courses/:id

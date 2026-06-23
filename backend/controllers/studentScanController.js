@@ -101,9 +101,25 @@ const scanQR = async (req, res, next) => {
     }
 
     // ── All checks passed - mark attendance ─────────────
+    const scannedAt = new Date();
+
+    // Push to session attendees array (for live counter)
     session.attendees.push({
       student: student._id,
-      scannedAt: new Date(),
+      scannedAt,
+      scannedLocation: { latitude, longitude },
+      distance,
+    });
+
+    await session.save();
+
+    // Create attendance record (for history & reports)
+    await AttendanceRecord.create({
+      session: session._id,
+      student: student._id,
+      course: session.course._id,
+      status: "present",
+      scannedAt,
       scannedLocation: { latitude, longitude },
       distance,
     });
@@ -277,7 +293,19 @@ const getAttendanceHistory = async (req, res, next) => {
   try {
     const student = await Student.findOne({ user: req.user._id });
 
-    const records = await AttendanceRecord.find({ student: student._id })
+    if (!student) {
+      return res.status(404).json({ message: "Student profile not found" });
+    }
+
+    // Build query
+    const query = { student: student._id };
+
+    // Add course filter if provided
+    if (req.query.courseId) {
+      query.course = req.query.courseId;
+    }
+
+    const records = await AttendanceRecord.find(query)
       .sort({ createdAt: -1 })
       .populate("course", "courseCode courseTitle")
       .populate("session", "topic startTime");

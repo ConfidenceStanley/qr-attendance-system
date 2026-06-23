@@ -15,6 +15,7 @@ import {
   HiOutlinePhone,
   HiOutlineEye,
   HiOutlineFilter,
+  HiOutlineKey,
 } from "react-icons/hi";
 
 // Redux
@@ -33,6 +34,7 @@ import FormInput from "../../components/common/FormInput";
 import FormSelect from "../../components/common/FormSelect";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import EmptyState from "../../components/common/EmptyState";
+import ResetPasswordModal from "../../components/admin/ResetPasswordModal";
 
 const StudentsPage = () => {
   const dispatch = useDispatch();
@@ -49,16 +51,15 @@ const StudentsPage = () => {
   const [editingStudent, setEditingStudent] = useState(null);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [viewingStudent, setViewingStudent] = useState(null);
+  const [resetUser, setResetUser] = useState(null);
 
   // Form state - includes both student and guardian fields
   const initialFormState = {
-    // Student fields
     fullName: "",
     email: "",
     studentId: "",
     level: "HND1",
     department: "Computer Science",
-    // Guardian fields
     guardianName: "",
     guardianEmail: "",
     guardianPhone: "",
@@ -68,25 +69,17 @@ const StudentsPage = () => {
   const [formData, setFormData] = useState(initialFormState);
   const [formErrors, setFormErrors] = useState({});
 
-  // ─────────────────────────────────────────────
-  // Fetch students when search or filter changes
-  // ─────────────────────────────────────────────
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Build query params dynamically
       const params = {};
       if (searchTerm) params.search = searchTerm;
       if (levelFilter) params.level = levelFilter;
-
       dispatch(fetchStudents(params));
     }, 300);
 
     return () => clearTimeout(timer);
   }, [dispatch, searchTerm, levelFilter]);
 
-  // ─────────────────────────────────────────────
-  // Open modal handlers
-  // ─────────────────────────────────────────────
   const handleAddNew = () => {
     setEditingStudent(null);
     setFormData(initialFormState);
@@ -96,7 +89,6 @@ const StudentsPage = () => {
 
   const handleEdit = (student) => {
     setEditingStudent(student);
-    // Pre-fill form with existing student data
     setFormData({
       fullName: student.fullName || "",
       email: student.email || "",
@@ -122,29 +114,18 @@ const StudentsPage = () => {
     setShowDeleteDialog(true);
   };
 
-  // ─────────────────────────────────────────────
-  // Form change handler
-  // ─────────────────────────────────────────────
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-
-    // Clear error for the field being edited
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: "" });
     }
   };
 
-  // ─────────────────────────────────────────────
-  // Form validation
-  // ─────────────────────────────────────────────
   const validateForm = () => {
     const errors = {};
 
-    // Student validations
-    if (!formData.fullName.trim()) {
-      errors.fullName = "Full name is required";
-    }
+    if (!formData.fullName.trim()) errors.fullName = "Full name is required";
 
     if (!formData.email.trim()) {
       errors.email = "Email is required";
@@ -156,22 +137,17 @@ const StudentsPage = () => {
       errors.studentId = "Student ID is required";
     }
 
-    if (!formData.level) {
-      errors.level = "Level is required";
-    }
+    if (!formData.level) errors.level = "Level is required";
 
-    // Guardian validations (required for create only)
     if (!editingStudent) {
       if (!formData.guardianName.trim()) {
         errors.guardianName = "Guardian name is required";
       }
-
       if (!formData.guardianEmail.trim()) {
         errors.guardianEmail = "Guardian email is required";
       } else if (!/\S+@\S+\.\S+/.test(formData.guardianEmail)) {
         errors.guardianEmail = "Please enter a valid email";
       }
-
       if (!formData.guardianPhone.trim()) {
         errors.guardianPhone = "Guardian phone is required";
       }
@@ -181,17 +157,12 @@ const StudentsPage = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // ─────────────────────────────────────────────
-  // Submit form
-  // ─────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     try {
       if (editingStudent) {
-        // Cannot change studentId after creation
         const { studentId, ...updateData } = formData;
         await dispatch(
           updateStudent({ id: editingStudent.id, data: updateData })
@@ -201,16 +172,12 @@ const StudentsPage = () => {
         await dispatch(createStudent(formData)).unwrap();
         toast.success("Student created. Welcome email sent.");
       }
-
       setShowFormModal(false);
     } catch (error) {
       toast.error(error || "Operation failed", { duration: 4000 });
     }
   };
 
-  // ─────────────────────────────────────────────
-  // Confirm delete
-  // ─────────────────────────────────────────────
   const handleConfirmDelete = async () => {
     try {
       await dispatch(deleteStudent(studentToDelete.id)).unwrap();
@@ -222,7 +189,6 @@ const StudentsPage = () => {
     }
   };
 
-  // Stats for header
   const activeCount = students.filter((s) => s.isActive).length;
   const inactiveCount = students.filter((s) => !s.isActive).length;
 
@@ -234,7 +200,6 @@ const StudentsPage = () => {
         padding: "40px 32px",
       }}
     >
-      {/* Header */}
       <PageHeader
         breadcrumb="Admin"
         title="Students"
@@ -259,7 +224,6 @@ const StudentsPage = () => {
           flexWrap: "wrap",
         }}
       >
-        {/* Search bar */}
         <div style={{ position: "relative", flex: 1, minWidth: "260px" }}>
           <HiOutlineSearch
             size={18}
@@ -300,7 +264,6 @@ const StudentsPage = () => {
           />
         </div>
 
-        {/* Level filter dropdown */}
         <div style={{ position: "relative", minWidth: "180px" }}>
           <HiOutlineFilter
             size={16}
@@ -343,7 +306,7 @@ const StudentsPage = () => {
         </div>
       </div>
 
-      {/* Table or Empty State */}
+      {/* Table */}
       <div
         style={{
           background: "white",
@@ -365,13 +328,7 @@ const StudentsPage = () => {
                 animation: "spin 0.6s linear infinite",
               }}
             />
-            <p
-              style={{
-                fontSize: "13px",
-                color: "#71717a",
-                marginTop: "16px",
-              }}
-            >
+            <p style={{ fontSize: "13px", color: "#71717a", marginTop: "16px" }}>
               Loading students...
             </p>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -379,19 +336,14 @@ const StudentsPage = () => {
         ) : students.length === 0 ? (
           <EmptyState
             icon={HiOutlineUsers}
-            title={
-              searchTerm || levelFilter
-                ? "No students found"
-                : "No students yet"
-            }
+            title={searchTerm || levelFilter ? "No students found" : "No students yet"}
             description={
               searchTerm || levelFilter
                 ? "Try different search terms or clear filters."
                 : "Get started by adding your first student to the system."
             }
             action={
-              !searchTerm &&
-              !levelFilter && (
+              !searchTerm && !levelFilter && (
                 <Button
                   variant="primary"
                   icon={<HiOutlinePlus size={16} />}
@@ -404,20 +356,9 @@ const StudentsPage = () => {
           />
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "13px",
-              }}
-            >
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
               <thead>
-                <tr
-                  style={{
-                    background: "#fafafa",
-                    borderBottom: "1px solid #e4e4e7",
-                  }}
-                >
+                <tr style={{ background: "#fafafa", borderBottom: "1px solid #e4e4e7" }}>
                   <th style={th}>Student</th>
                   <th style={th}>Student ID</th>
                   <th style={th}>Level</th>
@@ -435,29 +376,17 @@ const StudentsPage = () => {
                       borderBottom: "1px solid #f4f4f5",
                       transition: "background 0.15s",
                     }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#fafafa")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#fafafa")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
-                    {/* Name + Email */}
                     <td style={td}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                        }}
-                      >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <div
                           style={{
                             width: "36px",
                             height: "36px",
                             borderRadius: "10px",
-                            background:
-                              "linear-gradient(135deg, #10b981, #059669)",
+                            background: "linear-gradient(135deg, #10b981, #059669)",
                             color: "white",
                             display: "flex",
                             alignItems: "center",
@@ -470,29 +399,16 @@ const StudentsPage = () => {
                           {student.fullName?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontWeight: 500,
-                              color: "#18181b",
-                            }}
-                          >
+                          <p style={{ margin: 0, fontWeight: 500, color: "#18181b" }}>
                             {student.fullName}
                           </p>
-                          <p
-                            style={{
-                              margin: "2px 0 0",
-                              color: "#71717a",
-                              fontSize: "12px",
-                            }}
-                          >
+                          <p style={{ margin: "2px 0 0", color: "#71717a", fontSize: "12px" }}>
                             {student.email}
                           </p>
                         </div>
                       </div>
                     </td>
 
-                    {/* Student ID */}
                     <td style={td}>
                       <span
                         style={{
@@ -508,7 +424,6 @@ const StudentsPage = () => {
                       </span>
                     </td>
 
-                    {/* Level */}
                     <td style={td}>
                       <span
                         style={{
@@ -524,15 +439,12 @@ const StudentsPage = () => {
                       </span>
                     </td>
 
-                    {/* Department */}
                     <td style={td}>{student.department}</td>
 
-                    {/* Course count */}
                     <td style={td}>
                       <span
                         style={{
-                          color:
-                            student.courseCount > 0 ? "#4f46e5" : "#71717a",
+                          color: student.courseCount > 0 ? "#4f46e5" : "#71717a",
                           fontWeight: 500,
                         }}
                       >
@@ -540,7 +452,6 @@ const StudentsPage = () => {
                       </span>
                     </td>
 
-                    {/* Status */}
                     <td style={td}>
                       {student.isActive ? (
                         <span
@@ -579,11 +490,8 @@ const StudentsPage = () => {
                       )}
                     </td>
 
-                    {/* Actions */}
                     <td style={{ ...td, textAlign: "right" }}>
-                      <div
-                        style={{ display: "inline-flex", gap: "6px" }}
-                      >
+                      <div style={{ display: "inline-flex", gap: "6px" }}>
                         <button
                           onClick={() => handleViewDetails(student)}
                           style={iconBtn}
@@ -618,6 +526,24 @@ const StudentsPage = () => {
 
                         {student.isActive && (
                           <button
+                            onClick={() => setResetUser(student)}
+                            style={iconBtn}
+                            title="Reset Password"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = "#f59e0b";
+                              e.currentTarget.style.color = "#f59e0b";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = "#e4e4e7";
+                              e.currentTarget.style.color = "#71717a";
+                            }}
+                          >
+                            <HiOutlineKey size={14} />
+                          </button>
+                        )}
+
+                        {student.isActive && (
+                          <button
                             onClick={() => handleDeleteClick(student)}
                             style={iconBtn}
                             title="Deactivate"
@@ -643,7 +569,7 @@ const StudentsPage = () => {
         )}
       </div>
 
-      {/* ───── Create/Edit Modal ───── */}
+      {/* Create/Edit Modal */}
       <Modal
         isOpen={showFormModal}
         onClose={() => setShowFormModal(false)}
@@ -656,7 +582,6 @@ const StudentsPage = () => {
         size="lg"
       >
         <form onSubmit={handleSubmit}>
-          {/* ─── Student Section ─── */}
           <SectionLabel
             title="Student Information"
             description="Basic student details and academic info"
@@ -696,11 +621,7 @@ const StudentsPage = () => {
               disabled={!!editingStudent}
               icon={<HiOutlineIdentification size={16} />}
               error={formErrors.studentId}
-              hint={
-                editingStudent
-                  ? "Student ID cannot be changed"
-                  : null
-              }
+              hint={editingStudent ? "Student ID cannot be changed" : null}
             />
 
             <FormSelect
@@ -734,7 +655,6 @@ const StudentsPage = () => {
             />
           </FormGrid>
 
-          {/* ─── Guardian Section ─── */}
           <SectionLabel
             title="Guardian Information"
             description="Emergency contact and notification recipient"
@@ -793,7 +713,6 @@ const StudentsPage = () => {
             />
           </FormGrid>
 
-          {/* Action buttons */}
           <div
             style={{
               display: "flex",
@@ -811,18 +730,14 @@ const StudentsPage = () => {
             >
               Cancel
             </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              loading={isSubmitting}
-            >
+            <Button variant="primary" type="submit" loading={isSubmitting}>
               {editingStudent ? "Save Changes" : "Create Student"}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* ───── Student Details Modal ───── */}
+      {/* Student Details Modal */}
       <Modal
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
@@ -835,16 +750,9 @@ const StudentsPage = () => {
             <DetailSection title="Personal Information">
               <DetailRow label="Full Name" value={viewingStudent.fullName} />
               <DetailRow label="Email" value={viewingStudent.email} />
-              <DetailRow
-                label="Student ID"
-                value={viewingStudent.studentId}
-                mono
-              />
+              <DetailRow label="Student ID" value={viewingStudent.studentId} mono />
               <DetailRow label="Level" value={viewingStudent.level} />
-              <DetailRow
-                label="Department"
-                value={viewingStudent.department}
-              />
+              <DetailRow label="Department" value={viewingStudent.department} />
               <DetailRow
                 label="Status"
                 value={viewingStudent.isActive ? "Active" : "Inactive"}
@@ -858,9 +766,7 @@ const StudentsPage = () => {
               />
               <DetailRow
                 label="Relationship"
-                value={
-                  viewingStudent.guardian?.relationship || "Not provided"
-                }
+                value={viewingStudent.guardian?.relationship || "Not provided"}
               />
               <DetailRow
                 label="Email"
@@ -896,7 +802,7 @@ const StudentsPage = () => {
         )}
       </Modal>
 
-      {/* ───── Delete Confirmation ───── */}
+      {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
@@ -912,15 +818,19 @@ const StudentsPage = () => {
         variant="danger"
         loading={isSubmitting}
       />
+
+      {/* Reset Password Modal */}
+      {resetUser && (
+        <ResetPasswordModal
+          user={resetUser}
+          onClose={() => setResetUser(null)}
+        />
+      )}
     </div>
   );
 };
 
-// ─────────────────────────────────────────────
-// Helper Components (local to this file)
-// ─────────────────────────────────────────────
-
-// Section label inside forms
+// Helper Components
 const SectionLabel = ({ title, description, spacing }) => (
   <div style={{ marginTop: spacing ? "24px" : 0, marginBottom: "16px" }}>
     <h3
@@ -935,19 +845,10 @@ const SectionLabel = ({ title, description, spacing }) => (
     >
       {title}
     </h3>
-    <p
-      style={{
-        fontSize: "12px",
-        color: "#71717a",
-        margin: 0,
-      }}
-    >
-      {description}
-    </p>
+    <p style={{ fontSize: "12px", color: "#71717a", margin: 0 }}>{description}</p>
   </div>
 );
 
-// 2-column form grid
 const FormGrid = ({ children }) => (
   <div
     style={{
@@ -960,7 +861,6 @@ const FormGrid = ({ children }) => (
   </div>
 );
 
-// Detail section in view modal
 const DetailSection = ({ title, children, spacing }) => (
   <div style={{ marginTop: spacing ? "20px" : 0 }}>
     <h3
@@ -983,7 +883,6 @@ const DetailSection = ({ title, children, spacing }) => (
   </div>
 );
 
-// Row inside detail section
 const DetailRow = ({ label, value, mono }) => (
   <div
     style={{
@@ -1008,7 +907,6 @@ const DetailRow = ({ label, value, mono }) => (
   </div>
 );
 
-// Table cell styles
 const th = {
   padding: "14px 20px",
   textAlign: "left",

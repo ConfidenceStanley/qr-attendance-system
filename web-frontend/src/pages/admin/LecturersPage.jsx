@@ -9,10 +9,10 @@ import {
   HiOutlineUserGroup,
   HiOutlineMail,
   HiOutlineIdentification,
-  HiOutlineOfficeBuilding,
   HiOutlineUser,
   HiOutlineCheckCircle,
   HiOutlineXCircle,
+  HiOutlineKey
 } from "react-icons/hi";
 
 // Redux
@@ -31,6 +31,7 @@ import FormInput from "../../components/common/FormInput";
 import FormSelect from "../../components/common/FormSelect";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import EmptyState from "../../components/common/EmptyState";
+import ResetPasswordModal from "../../components/admin/ResetPasswordModal";
 
 const LecturersPage = () => {
   const dispatch = useDispatch();
@@ -45,6 +46,9 @@ const LecturersPage = () => {
   const [editingLecturer, setEditingLecturer] = useState(null); // null = creating
   const [lecturerToDelete, setLecturerToDelete] = useState(null);
 
+  const [resetUser, setResetUser] = useState(null);
+
+  
   // Form state for create/edit
   const [formData, setFormData] = useState({
     fullName: "",
@@ -505,6 +509,24 @@ const LecturersPage = () => {
                           <HiOutlinePencil size={14} />
                         </button>
 
+{lecturer.isActive && (
+                          <button
+                            onClick={() => setResetUser(lecturer)}
+                            style={iconBtn}
+                            title="Reset Password"
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = "#f59e0b";
+                              e.currentTarget.style.color = "#f59e0b";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = "#e4e4e7";
+                              e.currentTarget.style.color = "#71717a";
+                            }}
+                          >
+                            <HiOutlineKey size={14} />
+                          </button>
+                        )}
+
                         {lecturer.isActive && (
                           <button
                             onClick={() => handleDeleteClick(lecturer)}
@@ -522,6 +544,7 @@ const LecturersPage = () => {
                             <HiOutlineTrash size={14} />
                           </button>
                         )}
+
                       </div>
                     </td>
                   </tr>
@@ -646,6 +669,14 @@ const LecturersPage = () => {
         variant="danger"
         loading={isSubmitting}
       />
+
+      {/* Reset Password Modal */}
+      {resetUser && (
+        <ResetPasswordModal
+          user={resetUser}
+          onClose={() => setResetUser(null)}
+        />
+      )}
     </div>
   );
 };
