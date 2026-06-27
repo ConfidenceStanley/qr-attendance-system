@@ -16,6 +16,7 @@ import {
   HiOutlineEye,
   HiOutlineFilter,
   HiOutlineKey,
+  HiOutlineUpload,
 } from "react-icons/hi";
 
 // Redux
@@ -35,6 +36,7 @@ import FormSelect from "../../components/common/FormSelect";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import EmptyState from "../../components/common/EmptyState";
 import ResetPasswordModal from "../../components/admin/ResetPasswordModal";
+import BulkImportModal from "../../components/admin/BulkImportModal";
 
 const StudentsPage = () => {
   const dispatch = useDispatch();
@@ -52,8 +54,8 @@ const StudentsPage = () => {
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [viewingStudent, setViewingStudent] = useState(null);
   const [resetUser, setResetUser] = useState(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
-  // Form state - includes both student and guardian fields
   const initialFormState = {
     fullName: "",
     email: "",
@@ -69,6 +71,9 @@ const StudentsPage = () => {
   const [formData, setFormData] = useState(initialFormState);
   const [formErrors, setFormErrors] = useState({});
 
+  // ─────────────────────────────────────────────
+  // Fetch students with debounced search
+  // ─────────────────────────────────────────────
   useEffect(() => {
     const timer = setTimeout(() => {
       const params = {};
@@ -76,10 +81,12 @@ const StudentsPage = () => {
       if (levelFilter) params.level = levelFilter;
       dispatch(fetchStudents(params));
     }, 300);
-
     return () => clearTimeout(timer);
   }, [dispatch, searchTerm, levelFilter]);
 
+  // ─────────────────────────────────────────────
+  // Handlers
+  // ─────────────────────────────────────────────
   const handleAddNew = () => {
     setEditingStudent(null);
     setFormData(initialFormState);
@@ -124,35 +131,27 @@ const StudentsPage = () => {
 
   const validateForm = () => {
     const errors = {};
-
     if (!formData.fullName.trim()) errors.fullName = "Full name is required";
-
     if (!formData.email.trim()) {
       errors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = "Please enter a valid email";
     }
-
     if (!editingStudent && !formData.studentId.trim()) {
       errors.studentId = "Student ID is required";
     }
-
     if (!formData.level) errors.level = "Level is required";
-
     if (!editingStudent) {
-      if (!formData.guardianName.trim()) {
+      if (!formData.guardianName.trim())
         errors.guardianName = "Guardian name is required";
-      }
       if (!formData.guardianEmail.trim()) {
         errors.guardianEmail = "Guardian email is required";
       } else if (!/\S+@\S+\.\S+/.test(formData.guardianEmail)) {
         errors.guardianEmail = "Please enter a valid email";
       }
-      if (!formData.guardianPhone.trim()) {
+      if (!formData.guardianPhone.trim())
         errors.guardianPhone = "Guardian phone is required";
-      }
     }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -160,7 +159,6 @@ const StudentsPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
     try {
       if (editingStudent) {
         const { studentId, ...updateData } = formData;
@@ -189,33 +187,64 @@ const StudentsPage = () => {
     }
   };
 
+  // Called by BulkImportModal after successful import
+  const handleBulkImportSuccess = () => {
+    dispatch(fetchStudents({}));
+  };
+
   const activeCount = students.filter((s) => s.isActive).length;
   const inactiveCount = students.filter((s) => !s.isActive).length;
 
   return (
-    <div
-      style={{
-        maxWidth: "1280px",
-        margin: "0 auto",
-        padding: "40px 32px",
-      }}
-    >
+    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 32px" }}>
+
+      {/* ── Page Header ── */}
       <PageHeader
         breadcrumb="Admin"
         title="Students"
         description={`${activeCount} active, ${inactiveCount} inactive`}
         action={
-          <Button
-            variant="primary"
-            icon={<HiOutlinePlus size={16} />}
-            onClick={handleAddNew}
-          >
-            Add Student
-          </Button>
+          // Header right side — two buttons side by side
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button
+              onClick={() => setBulkImportOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "9px 16px",
+                backgroundColor: "#f4f4f5",
+                color: "#18181b",
+                border: "1px solid #e4e4e7",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#e4e4e7";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#f4f4f5";
+              }}
+            >
+              <HiOutlineUpload size={16} />
+              Bulk Import
+            </button>
+
+            <Button
+              variant="primary"
+              icon={<HiOutlinePlus size={16} />}
+              onClick={handleAddNew}
+            >
+              Add Student
+            </Button>
+          </div>
         }
       />
 
-      {/* Search + Filter */}
+      {/* ── Search + Filter ── */}
       <div
         style={{
           display: "flex",
@@ -306,7 +335,7 @@ const StudentsPage = () => {
         </div>
       </div>
 
-      {/* Table */}
+      {/* ── Table ── */}
       <div
         style={{
           background: "white",
@@ -340,7 +369,7 @@ const StudentsPage = () => {
             description={
               searchTerm || levelFilter
                 ? "Try different search terms or clear filters."
-                : "Get started by adding your first student to the system."
+                : "Get started by adding your first student or use Bulk Import."
             }
             action={
               !searchTerm && !levelFilter && (
@@ -356,7 +385,9 @@ const StudentsPage = () => {
           />
         ) : (
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <table
+              style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}
+            >
               <thead>
                 <tr style={{ background: "#fafafa", borderBottom: "1px solid #e4e4e7" }}>
                   <th style={th}>Student</th>
@@ -376,9 +407,14 @@ const StudentsPage = () => {
                       borderBottom: "1px solid #f4f4f5",
                       transition: "background 0.15s",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#fafafa")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = "#fafafa")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
                   >
+                    {/* Name + Email */}
                     <td style={td}>
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <div
@@ -409,6 +445,7 @@ const StudentsPage = () => {
                       </div>
                     </td>
 
+                    {/* Student ID */}
                     <td style={td}>
                       <span
                         style={{
@@ -424,6 +461,7 @@ const StudentsPage = () => {
                       </span>
                     </td>
 
+                    {/* Level */}
                     <td style={td}>
                       <span
                         style={{
@@ -439,8 +477,10 @@ const StudentsPage = () => {
                       </span>
                     </td>
 
+                    {/* Department */}
                     <td style={td}>{student.department}</td>
 
+                    {/* Courses */}
                     <td style={td}>
                       <span
                         style={{
@@ -452,6 +492,7 @@ const StudentsPage = () => {
                       </span>
                     </td>
 
+                    {/* Status */}
                     <td style={td}>
                       {student.isActive ? (
                         <span
@@ -490,6 +531,7 @@ const StudentsPage = () => {
                       )}
                     </td>
 
+                    {/* Actions */}
                     <td style={{ ...td, textAlign: "right" }}>
                       <div style={{ display: "inline-flex", gap: "6px" }}>
                         <button
@@ -569,7 +611,7 @@ const StudentsPage = () => {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* ── Create / Edit Modal ── */}
       <Modal
         isOpen={showFormModal}
         onClose={() => setShowFormModal(false)}
@@ -598,7 +640,6 @@ const StudentsPage = () => {
               icon={<HiOutlineUser size={16} />}
               error={formErrors.fullName}
             />
-
             <FormInput
               label="Email Address"
               name="email"
@@ -610,7 +651,6 @@ const StudentsPage = () => {
               icon={<HiOutlineMail size={16} />}
               error={formErrors.email}
             />
-
             <FormInput
               label="Student ID"
               name="studentId"
@@ -623,7 +663,6 @@ const StudentsPage = () => {
               error={formErrors.studentId}
               hint={editingStudent ? "Student ID cannot be changed" : null}
             />
-
             <FormSelect
               label="Level"
               name="level"
@@ -638,7 +677,6 @@ const StudentsPage = () => {
               required
               error={formErrors.level}
             />
-
             <FormSelect
               label="Department"
               name="department"
@@ -672,7 +710,6 @@ const StudentsPage = () => {
               icon={<HiOutlineUser size={16} />}
               error={formErrors.guardianName}
             />
-
             <FormSelect
               label="Relationship"
               name="guardianRelationship"
@@ -687,7 +724,6 @@ const StudentsPage = () => {
               ]}
               required={!editingStudent}
             />
-
             <FormInput
               label="Guardian Email"
               name="guardianEmail"
@@ -700,7 +736,6 @@ const StudentsPage = () => {
               error={formErrors.guardianEmail}
               hint="Absence alerts will be sent here"
             />
-
             <FormInput
               label="Guardian Phone"
               name="guardianPhone"
@@ -737,7 +772,7 @@ const StudentsPage = () => {
         </form>
       </Modal>
 
-      {/* Student Details Modal */}
+      {/* ── Student Details Modal ── */}
       <Modal
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
@@ -802,7 +837,7 @@ const StudentsPage = () => {
         )}
       </Modal>
 
-      {/* Delete Confirmation */}
+      {/* ── Delete Confirmation ── */}
       <ConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
@@ -819,18 +854,28 @@ const StudentsPage = () => {
         loading={isSubmitting}
       />
 
-      {/* Reset Password Modal */}
+      {/* ── Reset Password Modal ── */}
       {resetUser && (
         <ResetPasswordModal
           user={resetUser}
           onClose={() => setResetUser(null)}
         />
       )}
+
+      {/* ── Bulk Import Modal ── */}
+      <BulkImportModal
+        isOpen={bulkImportOpen}
+        onClose={() => setBulkImportOpen(false)}
+        type="students"
+        onSuccess={handleBulkImportSuccess}
+      />
     </div>
   );
 };
 
+// ─────────────────────────────────────────────
 // Helper Components
+// ─────────────────────────────────────────────
 const SectionLabel = ({ title, description, spacing }) => (
   <div style={{ marginTop: spacing ? "24px" : 0, marginBottom: "16px" }}>
     <h3
@@ -907,6 +952,9 @@ const DetailRow = ({ label, value, mono }) => (
   </div>
 );
 
+// ─────────────────────────────────────────────
+// Shared cell styles
+// ─────────────────────────────────────────────
 const th = {
   padding: "14px 20px",
   textAlign: "left",

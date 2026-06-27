@@ -9,55 +9,47 @@ const studentSchema = new mongoose.Schema(
     },
     studentId: {
       type: String,
-      required: [true, "Student/Matric number is required"],
+      required: true,
       unique: true,
       trim: true,
-      uppercase: true,
-    },
-    department: {
-      type: String,
-      required: [true, "Department is required"],
-      default: "Computer Science",
     },
     level: {
       type: String,
-      required: [true, "Level is required"],
       enum: ["ND1", "ND2", "HND1", "HND2"],
-      default: "HND2",
+      required: true,
     },
-    courses: [
+    department: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    enrolledCourses: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Course",
       },
     ],
+
     guardian: {
       name: {
         type: String,
-        required: [true, "Guardian name is required"],
-        trim: true,
+        default: "",
       },
       email: {
         type: String,
-        required: [true, "Guardian email is required"],
-        lowercase: true,
-        trim: true,
+        default: "",
       },
       phone: {
         type: String,
-        required: [true, "Guardian phone is required"],
-        trim: true,
+        default: "",
       },
       relationship: {
         type: String,
-        required: [true, "Guardian relationship is required"],
-        enum: ["Parent", "Guardian", "Sibling", "Spouse", "Other"],
+        default: "Guardian",
       },
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Student", studentSchema);

@@ -12,7 +12,8 @@ import {
   HiOutlineUser,
   HiOutlineCheckCircle,
   HiOutlineXCircle,
-  HiOutlineKey
+  HiOutlineKey,
+  HiOutlineUpload,
 } from "react-icons/hi";
 
 // Redux
@@ -32,6 +33,7 @@ import FormSelect from "../../components/common/FormSelect";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import EmptyState from "../../components/common/EmptyState";
 import ResetPasswordModal from "../../components/admin/ResetPasswordModal";
+import BulkImportModal from "../../components/admin/BulkImportModal";
 
 const LecturersPage = () => {
   const dispatch = useDispatch();
@@ -39,17 +41,15 @@ const LecturersPage = () => {
     (state) => state.lecturers
   );
 
-  // Local state for UI
+  // Local state
   const [searchTerm, setSearchTerm] = useState("");
   const [showFormModal, setShowFormModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [editingLecturer, setEditingLecturer] = useState(null); // null = creating
+  const [editingLecturer, setEditingLecturer] = useState(null);
   const [lecturerToDelete, setLecturerToDelete] = useState(null);
-
   const [resetUser, setResetUser] = useState(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
-  
-  // Form state for create/edit
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -60,19 +60,17 @@ const LecturersPage = () => {
   const [formErrors, setFormErrors] = useState({});
 
   // ─────────────────────────────────────────────
-  // Load lecturers on mount and when search changes
+  // Fetch with debounced search
   // ─────────────────────────────────────────────
   useEffect(() => {
-    // Debounce search by 300ms - don't fire on every keystroke
     const timer = setTimeout(() => {
       dispatch(fetchLecturers(searchTerm ? { search: searchTerm } : {}));
     }, 300);
-
     return () => clearTimeout(timer);
   }, [dispatch, searchTerm]);
 
   // ─────────────────────────────────────────────
-  // Open modal for CREATE
+  // Handlers
   // ─────────────────────────────────────────────
   const handleAddNew = () => {
     setEditingLecturer(null);
@@ -86,9 +84,6 @@ const LecturersPage = () => {
     setShowFormModal(true);
   };
 
-  // ─────────────────────────────────────────────
-  // Open modal for EDIT
-  // ─────────────────────────────────────────────
   const handleEdit = (lecturer) => {
     setEditingLecturer(lecturer);
     setFormData({
@@ -101,88 +96,57 @@ const LecturersPage = () => {
     setShowFormModal(true);
   };
 
-  // ─────────────────────────────────────────────
-  // Open delete confirmation
-  // ─────────────────────────────────────────────
   const handleDeleteClick = (lecturer) => {
     setLecturerToDelete(lecturer);
     setShowDeleteDialog(true);
   };
 
-  // ─────────────────────────────────────────────
-  // Form input change handler
-  // ─────────────────────────────────────────────
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-
-    // Clear error for this field as user types
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: "" });
     }
   };
 
-  // ─────────────────────────────────────────────
-  // Validate form before submit
-  // ─────────────────────────────────────────────
   const validateForm = () => {
     const errors = {};
-
-    if (!formData.fullName.trim()) {
-      errors.fullName = "Full name is required";
-    }
-
+    if (!formData.fullName.trim()) errors.fullName = "Full name is required";
     if (!formData.email.trim()) {
       errors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = "Please enter a valid email";
     }
-
     if (!editingLecturer && !formData.staffId.trim()) {
-      // Staff ID is only required when creating new
       errors.staffId = "Staff ID is required";
     }
-
     if (!formData.department.trim()) {
       errors.department = "Department is required";
     }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // ─────────────────────────────────────────────
-  // Submit form (create or update)
-  // ─────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
-
     try {
       if (editingLecturer) {
-        // Update existing
-        // Don't send staffId on update (cannot be changed)
         const { staffId, ...updateData } = formData;
         await dispatch(
           updateLecturer({ id: editingLecturer.id, data: updateData })
         ).unwrap();
         toast.success("Lecturer updated successfully");
       } else {
-        // Create new
         await dispatch(createLecturer(formData)).unwrap();
         toast.success("Lecturer created. Welcome email sent.");
       }
-
       setShowFormModal(false);
     } catch (error) {
       toast.error(error || "Operation failed", { duration: 4000 });
     }
   };
 
-  // ─────────────────────────────────────────────
-  // Confirm delete (deactivate)
-  // ─────────────────────────────────────────────
   const handleConfirmDelete = async () => {
     try {
       await dispatch(deleteLecturer(lecturerToDelete.id)).unwrap();
@@ -190,41 +154,67 @@ const LecturersPage = () => {
       setShowDeleteDialog(false);
       setLecturerToDelete(null);
     } catch (error) {
-      toast.error(error || "Failed to deactivate lecturer", {
-        duration: 4000,
-      });
+      toast.error(error || "Failed to deactivate lecturer", { duration: 4000 });
     }
   };
 
-  // Active/Inactive count for header stats
+  // Called by BulkImportModal after successful import
+  const handleBulkImportSuccess = () => {
+    dispatch(fetchLecturers({}));
+  };
+
   const activeCount = lecturers.filter((l) => l.isActive).length;
   const inactiveCount = lecturers.filter((l) => !l.isActive).length;
 
   return (
-    <div
-      style={{
-        maxWidth: "1280px",
-        margin: "0 auto",
-        padding: "40px 32px",
-      }}
-    >
-      {/* Page Header */}
+    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "40px 32px" }}>
+
+      {/* ── Page Header ── */}
       <PageHeader
         breadcrumb="Admin"
         title="Lecturers"
         description={`${activeCount} active, ${inactiveCount} inactive`}
         action={
-          <Button
-            variant="primary"
-            icon={<HiOutlinePlus size={16} />}
-            onClick={handleAddNew}
-          >
-            Add Lecturer
-          </Button>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button
+              onClick={() => setBulkImportOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "9px 16px",
+                backgroundColor: "#f4f4f5",
+                color: "#18181b",
+                border: "1px solid #e4e4e7",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#e4e4e7";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#f4f4f5";
+              }}
+            >
+              <HiOutlineUpload size={16} />
+              Bulk Import
+            </button>
+
+            <Button
+              variant="primary"
+              icon={<HiOutlinePlus size={16} />}
+              onClick={handleAddNew}
+            >
+              Add Lecturer
+            </Button>
+          </div>
         }
       />
 
-      {/* Search Bar */}
+      {/* ── Search Bar ── */}
       <div style={{ marginBottom: "20px" }}>
         <div style={{ position: "relative", maxWidth: "400px" }}>
           <HiOutlineSearch
@@ -267,7 +257,7 @@ const LecturersPage = () => {
         </div>
       </div>
 
-      {/* Lecturers Table / Empty State */}
+      {/* ── Table ── */}
       <div
         style={{
           background: "white",
@@ -277,7 +267,6 @@ const LecturersPage = () => {
         }}
       >
         {isLoading ? (
-          // Loading skeleton
           <div style={{ padding: "60px", textAlign: "center" }}>
             <div
               style={{
@@ -290,28 +279,19 @@ const LecturersPage = () => {
                 animation: "spin 0.6s linear infinite",
               }}
             />
-            <p
-              style={{
-                fontSize: "13px",
-                color: "#71717a",
-                marginTop: "16px",
-              }}
-            >
+            <p style={{ fontSize: "13px", color: "#71717a", marginTop: "16px" }}>
               Loading lecturers...
             </p>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         ) : lecturers.length === 0 ? (
-          // Empty state
           <EmptyState
             icon={HiOutlineUserGroup}
-            title={
-              searchTerm ? "No lecturers found" : "No lecturers yet"
-            }
+            title={searchTerm ? "No lecturers found" : "No lecturers yet"}
             description={
               searchTerm
                 ? `No results matching "${searchTerm}". Try a different search.`
-                : "Get started by adding your first lecturer to the system."
+                : "Get started by adding your first lecturer or use Bulk Import."
             }
             action={
               !searchTerm && (
@@ -326,22 +306,12 @@ const LecturersPage = () => {
             }
           />
         ) : (
-          // Table
           <div style={{ overflowX: "auto" }}>
             <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "13px",
-              }}
+              style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}
             >
               <thead>
-                <tr
-                  style={{
-                    background: "#fafafa",
-                    borderBottom: "1px solid #e4e4e7",
-                  }}
-                >
+                <tr style={{ background: "#fafafa", borderBottom: "1px solid #e4e4e7" }}>
                   <th style={th}>Lecturer</th>
                   <th style={th}>Staff ID</th>
                   <th style={th}>Department</th>
@@ -365,22 +335,15 @@ const LecturersPage = () => {
                       (e.currentTarget.style.background = "transparent")
                     }
                   >
-                    {/* Name + Email cell */}
+                    {/* Name + Email */}
                     <td style={td}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                        }}
-                      >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <div
                           style={{
                             width: "36px",
                             height: "36px",
                             borderRadius: "10px",
-                            background:
-                              "linear-gradient(135deg, #4f46e5, #3730a3)",
+                            background: "linear-gradient(135deg, #4f46e5, #3730a3)",
                             color: "white",
                             display: "flex",
                             alignItems: "center",
@@ -393,22 +356,10 @@ const LecturersPage = () => {
                           {lecturer.fullName?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontWeight: 500,
-                              color: "#18181b",
-                            }}
-                          >
+                          <p style={{ margin: 0, fontWeight: 500, color: "#18181b" }}>
                             {lecturer.fullName}
                           </p>
-                          <p
-                            style={{
-                              margin: "2px 0 0",
-                              color: "#71717a",
-                              fontSize: "12px",
-                            }}
-                          >
+                          <p style={{ margin: "2px 0 0", color: "#71717a", fontSize: "12px" }}>
                             {lecturer.email}
                           </p>
                         </div>
@@ -434,7 +385,7 @@ const LecturersPage = () => {
                     {/* Department */}
                     <td style={td}>{lecturer.department}</td>
 
-                    {/* Course count */}
+                    {/* Courses */}
                     <td style={td}>
                       <span
                         style={{
@@ -446,7 +397,7 @@ const LecturersPage = () => {
                       </span>
                     </td>
 
-                    {/* Status badge */}
+                    {/* Status */}
                     <td style={td}>
                       {lecturer.isActive ? (
                         <span
@@ -487,12 +438,7 @@ const LecturersPage = () => {
 
                     {/* Actions */}
                     <td style={{ ...td, textAlign: "right" }}>
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          gap: "6px",
-                        }}
-                      >
+                      <div style={{ display: "inline-flex", gap: "6px" }}>
                         <button
                           onClick={() => handleEdit(lecturer)}
                           style={iconBtn}
@@ -509,7 +455,7 @@ const LecturersPage = () => {
                           <HiOutlinePencil size={14} />
                         </button>
 
-{lecturer.isActive && (
+                        {lecturer.isActive && (
                           <button
                             onClick={() => setResetUser(lecturer)}
                             style={iconBtn}
@@ -544,7 +490,6 @@ const LecturersPage = () => {
                             <HiOutlineTrash size={14} />
                           </button>
                         )}
-
                       </div>
                     </td>
                   </tr>
@@ -555,7 +500,7 @@ const LecturersPage = () => {
         )}
       </div>
 
-      {/* ───── Create/Edit Modal ───── */}
+      {/* ── Create / Edit Modal ── */}
       <Modal
         isOpen={showFormModal}
         onClose={() => setShowFormModal(false)}
@@ -578,7 +523,6 @@ const LecturersPage = () => {
             icon={<HiOutlineUser size={16} />}
             error={formErrors.fullName}
           />
-
           <FormInput
             label="Email Address"
             name="email"
@@ -590,7 +534,6 @@ const LecturersPage = () => {
             icon={<HiOutlineMail size={16} />}
             error={formErrors.email}
           />
-
           <FormInput
             label="Staff ID"
             name="staffId"
@@ -607,7 +550,6 @@ const LecturersPage = () => {
                 : null
             }
           />
-
           <FormSelect
             label="Department"
             name="department"
@@ -624,7 +566,6 @@ const LecturersPage = () => {
             error={formErrors.department}
           />
 
-          {/* Action buttons */}
           <div
             style={{
               display: "flex",
@@ -642,18 +583,14 @@ const LecturersPage = () => {
             >
               Cancel
             </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              loading={isSubmitting}
-            >
+            <Button variant="primary" type="submit" loading={isSubmitting}>
               {editingLecturer ? "Save Changes" : "Create Lecturer"}
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* ───── Delete Confirmation ───── */}
+      {/* ── Delete Confirmation ── */}
       <ConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
@@ -670,13 +607,21 @@ const LecturersPage = () => {
         loading={isSubmitting}
       />
 
-      {/* Reset Password Modal */}
+      {/* ── Reset Password Modal ── */}
       {resetUser && (
         <ResetPasswordModal
           user={resetUser}
           onClose={() => setResetUser(null)}
         />
       )}
+
+      {/* ── Bulk Import Modal ── */}
+      <BulkImportModal
+        isOpen={bulkImportOpen}
+        onClose={() => setBulkImportOpen(false)}
+        type="lecturers"
+        onSuccess={handleBulkImportSuccess}
+      />
     </div>
   );
 };

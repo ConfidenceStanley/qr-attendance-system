@@ -296,7 +296,7 @@ const handleAssignStudents = async () => {
       duration: 4000,
     });
   }
-};
+};  
 
   // Filter students for the assignment modal
   // Only show active students matching search

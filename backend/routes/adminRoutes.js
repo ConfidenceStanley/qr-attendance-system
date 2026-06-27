@@ -33,11 +33,16 @@ const {
   removeStudent,
 } = require("../controllers/adminCourseController");
 
+const {
+  upload,
+  bulkImportStudents,
+  bulkImportLecturers,
+  downloadTemplate,
+} = require("../controllers/adminBulkImportController");
+
 const { resetUserPassword } = require("../controllers/adminPasswordController");
 
-// All routes below require login + admin role
-// protect → checks JWT token is valid
-// authorize("admin") → checks role is admin
+
 router.use(protect);
 router.use(authorize("admin"));
 
@@ -47,6 +52,24 @@ router.use(authorize("admin"));
 router.route("/lecturers")
   .get(getAllLecturers)       // GET  /api/admin/lecturers
   .post(createLecturer);     // POST /api/admin/lecturers
+
+  // ── Bulk Import ──────────────────────────────
+router.post(
+  "/bulk-import/students",
+  upload.single("file"),    // "file" must match FormData field name in frontend
+  bulkImportStudents
+);
+
+router.post(
+  "/bulk-import/lecturers",
+  upload.single("file"),
+  bulkImportLecturers
+);
+
+router.get(
+  "/bulk-import/template/:type",  // :type = "students" or "lecturers"
+  downloadTemplate
+);
 
 router.route("/lecturers/:id")
   .get(getLecturerById)      // GET    /api/admin/lecturers/:id

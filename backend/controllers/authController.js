@@ -131,14 +131,14 @@ const login = async (req, res, next) => {
     if (user.role === "student") {
       console.log("Fetching student profile...");
       profileData = await Student.findOne({ user: user._id }).populate(
-        "courses",
+        "enrolledCourses",   // ← CORRECT (matches Student model)
         "courseCode courseTitle"
       );
       console.log("Student profile found:", profileData ? "YES" : "NO");
     } else if (user.role === "lecturer") {
       console.log("Fetching lecturer profile...");
       profileData = await Lecturer.findOne({ user: user._id }).populate(
-        "courses",
+         "courses",
         "courseCode courseTitle"
       );
       console.log("Lecturer profile found:", profileData ? "YES" : "NO");
@@ -188,14 +188,15 @@ const getMe = async (req, res, next) => {
 
     if (user.role === "student") {
       profileData = await Student.findOne({ user: user._id }).populate(
-        "courses",
+        "enrolledCourses",   // ← CORRECT
         "courseCode courseTitle"
       );
     } else if (user.role === "lecturer") {
       profileData = await Lecturer.findOne({ user: user._id }).populate(
-        "courses",
+        "courses",   // ← CORRECT
         "courseCode courseTitle"
       );
+        
     }
 
     return res.status(200).json({
