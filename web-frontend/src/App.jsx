@@ -8,7 +8,7 @@ import { Provider } from "react-redux";
 import { Toaster } from "react-hot-toast";
 import store from "./redux/store";
 
-// Public pages
+// Public
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/auth/LoginPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
@@ -19,8 +19,10 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import LecturersPage from "./pages/admin/LecturersPage";
 import StudentsPage from "./pages/admin/StudentsPage";
 import CoursesPage from "./pages/admin/CoursesPage";
+import ReportsPage from "./pages/admin/ReportsPage";
+import SettingsPage from "./pages/admin/SettingsPage";
 
-// Lecturer  ← only imported ONCE here, no duplicates
+// Lecturer
 import LecturerDashboard from "./pages/lecturer/LecturerDashboard";
 import MyCoursesPage from "./pages/lecturer/MyCoursesPage";
 import SessionsPage from "./pages/lecturer/SessionsPage";
@@ -51,12 +53,12 @@ function App() {
           }}
         />
         <Routes>
-          {/* ── Public ──────────────────────────────────── */}
+          {/* ── Public ── */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-          {/* ── Admin (nested inside AdminLayout) ───────── */}
+          {/* ── Admin ── */}
           <Route
             path="/admin"
             element={
@@ -70,25 +72,19 @@ function App() {
             <Route path="lecturers" element={<LecturersPage />} />
             <Route path="students" element={<StudentsPage />} />
             <Route path="courses" element={<CoursesPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
-          {/* ── Lecturer (nested inside LecturerLayout) ─── */}
-          {/* LecturerLayout is used INSIDE each page component */}
-          {/* so we just wrap the whole /lecturer block with   */}
-          {/* one ProtectedRoute, same pattern as admin        */}
+          {/* ── Lecturer ── */}
           <Route
             path="/lecturer"
             element={
               <ProtectedRoute allowedRoles={["lecturer"]}>
-                {/* 
-                  We use Navigate here because /lecturer alone 
-                  has no page - it should go to dashboard 
-                */}
                 <Navigate to="/lecturer/dashboard" replace />
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/lecturer/dashboard"
             element={
@@ -97,7 +93,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/lecturer/courses"
             element={
@@ -106,7 +101,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/lecturer/sessions"
             element={
@@ -115,8 +109,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Live QR display page - the main session screen */}
           <Route
             path="/lecturer/sessions/:id/live"
             element={
@@ -125,8 +117,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Attendance detail for a closed session */}
           <Route
             path="/lecturer/sessions/:id/attendance"
             element={
@@ -135,7 +125,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/lecturer/attendance"
             element={
@@ -145,7 +134,7 @@ function App() {
             }
           />
 
-          {/* ── Catch all ────────────────────────────────── */}
+          {/* ── Catch all ── */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

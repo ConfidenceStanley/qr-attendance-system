@@ -19,7 +19,6 @@ const AdminSidebar = () => {
     border: "#e4e4e7",
   };
 
-  // All sidebar menu items
   const menuItems = [
     {
       label: "Dashboard",
@@ -41,21 +40,15 @@ const AdminSidebar = () => {
       icon: HiOutlineBookOpen,
       path: "/admin/courses",
     },
-  ];
-
-  // Future items (Phase 5)
-  const futureItems = [
     {
       label: "Reports",
       icon: HiOutlineDocumentReport,
       path: "/admin/reports",
-      disabled: true,
     },
     {
       label: "Settings",
       icon: HiOutlineCog,
       path: "/admin/settings",
-      disabled: true,
     },
   ];
 
@@ -74,7 +67,7 @@ const AdminSidebar = () => {
         zIndex: 40,
       }}
     >
-      {/* Logo Section - Clickable, goes to landing page */}
+      {/* Logo */}
       <Link
         to="/"
         style={{
@@ -118,19 +111,13 @@ const AdminSidebar = () => {
           >
             QRoll
           </p>
-          <p
-            style={{
-              fontSize: "11px",
-              color: c.textMuted,
-              margin: 0,
-            }}
-          >
+          <p style={{ fontSize: "11px", color: c.textMuted, margin: 0 }}>
             Admin Console
           </p>
         </div>
       </Link>
 
-      {/* Menu Items */}
+      {/* Nav */}
       <nav
         style={{
           flex: 1,
@@ -140,7 +127,6 @@ const AdminSidebar = () => {
           gap: "4px",
         }}
       >
-        {/* Section label */}
         <p
           style={{
             fontSize: "11px",
@@ -178,7 +164,6 @@ const AdminSidebar = () => {
               }
             }}
             onMouseLeave={(e) => {
-              // Only reset if not active (active has rgba color)
               if (!e.currentTarget.style.background.includes("rgba")) {
                 e.currentTarget.style.background = "transparent";
               }
@@ -187,42 +172,6 @@ const AdminSidebar = () => {
             <item.icon size={18} />
             {item.label}
           </NavLink>
-        ))}
-
-        {/* Coming Soon section */}
-        <p
-          style={{
-            fontSize: "11px",
-            color: c.textMuted,
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            fontWeight: 600,
-            padding: "20px 12px 8px",
-            margin: 0,
-          }}
-        >
-          Coming soon
-        </p>
-
-        {futureItems.map((item) => (
-          <div
-            key={item.path}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              padding: "10px 12px",
-              borderRadius: "10px",
-              fontSize: "14px",
-              fontWeight: 500,
-              color: c.textMuted,
-              opacity: 0.5,
-              cursor: "not-allowed",
-            }}
-          >
-            <item.icon size={18} />
-            {item.label}
-          </div>
         ))}
       </nav>
 
@@ -236,7 +185,7 @@ const AdminSidebar = () => {
         }}
       >
         <p style={{ margin: 0 }}>QRoll v1.0</p>
-        <p style={{ margin: "2px 0 0" }}>© 2025</p>
+        <p style={{ margin: "2px 0 0" }}>© 2026</p>
       </div>
     </aside>
   );

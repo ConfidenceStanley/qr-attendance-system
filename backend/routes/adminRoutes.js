@@ -42,6 +42,8 @@ const {
 
 const { resetUserPassword } = require("../controllers/adminPasswordController");
 
+// ← single clean import — all three together
+const { sessionReport, courseReport, studentReport } = require("../controllers/reportController");
 
 router.use(protect);
 router.use(authorize("admin"));
@@ -50,72 +52,92 @@ router.use(authorize("admin"));
 // LECTURER ROUTES
 // ─────────────────────────────────────────────
 router.route("/lecturers")
-  .get(getAllLecturers)       // GET  /api/admin/lecturers
-  .post(createLecturer);     // POST /api/admin/lecturers
+  .get(getAllLecturers)
+  .post(createLecturer);
 
-  // ── Bulk Import ──────────────────────────────
-router.post(
-  "/bulk-import/students",
-  upload.single("file"),    // "file" must match FormData field name in frontend
-  bulkImportStudents
-);
-
-router.post(
-  "/bulk-import/lecturers",
-  upload.single("file"),
-  bulkImportLecturers
-);
-
-router.get(
-  "/bulk-import/template/:type",  // :type = "students" or "lecturers"
-  downloadTemplate
-);
+router.post("/bulk-import/students", upload.single("file"), bulkImportStudents);
+router.post("/bulk-import/lecturers", upload.single("file"), bulkImportLecturers);
+router.get("/bulk-import/template/:type", downloadTemplate);
 
 router.route("/lecturers/:id")
-  .get(getLecturerById)      // GET    /api/admin/lecturers/:id
-  .put(updateLecturer)       // PUT    /api/admin/lecturers/:id
-  .delete(deleteLecturer);   // DELETE /api/admin/lecturers/:id
+  .get(getLecturerById)
+  .put(updateLecturer)
+  .delete(deleteLecturer);
 
 // ─────────────────────────────────────────────
 // STUDENT ROUTES
 // ─────────────────────────────────────────────
 router.route("/students")
-  .get(getAllStudents)        // GET  /api/admin/students
-  .post(createStudent);      // POST /api/admin/students
+  .get(getAllStudents)
+  .post(createStudent);
 
 router.route("/students/:id")
-  .get(getStudentById)       // GET    /api/admin/students/:id
-  .put(updateStudent)        // PUT    /api/admin/students/:id
-  .delete(deleteStudent);    // DELETE /api/admin/students/:id
+  .get(getStudentById)
+  .put(updateStudent)
+  .delete(deleteStudent);
 
 // ─────────────────────────────────────────────
 // COURSE ROUTES
 // ─────────────────────────────────────────────
 router.route("/courses")
-  .get(getAllCourses)         // GET  /api/admin/courses
-  .post(createCourse);       // POST /api/admin/courses
+  .get(getAllCourses)
+  .post(createCourse);
 
 router.post("/users/:userId/reset-password", resetUserPassword);
 
 router.route("/courses/:id")
-  .get(getCourseById)        // GET    /api/admin/courses/:id
-  .put(updateCourse)         // PUT    /api/admin/courses/:id
-  .delete(deleteCourse);     // DELETE /api/admin/courses/:id
+  .get(getCourseById)
+  .put(updateCourse)
+  .delete(deleteCourse);
 
-// Course assignment routes
-router.post(
-  "/courses/:id/assign-lecturer",   // POST /api/admin/courses/:id/assign-lecturer
-  assignLecturer
-);
+router.post("/courses/:id/assign-lecturer", assignLecturer);
+router.post("/courses/:id/assign-students", assignStudents);
+router.delete("/courses/:id/students/:studentId", removeStudent);
 
-router.post(
-  "/courses/:id/assign-students",   // POST /api/admin/courses/:id/assign-students
-  assignStudents
-);
+// ─────────────────────────────────────────────
+// REPORT ROUTES
+// ─────────────────────────────────────────────
+router.get("/reports/session/:id", sessionReport);
+router.get("/reports/course/:id", courseReport);
+router.get("/reports/student/:id", studentReport);
 
-router.delete(
-  "/courses/:id/students/:studentId", // DELETE /api/admin/courses/:id/students/:studentId
-  removeStudent
-);
+router.get("/reports/course-summary/:id", async (req, res) => {
+  try {
+    const AttendanceSession = require("../models/AttendanceSession");
+    const AttendanceRecord = require("../models/AttendanceRecord");
+
+    const query = { course: req.params.id };
+    if (req.query.startDate && req.query.endDate) {
+      query.createdAt = {
+        $gte: new Date(req.query.startDate),
+        $lte: new Date(req.query.endDate),
+      };
+    }
+
+    const sessions = await AttendanceSession.find(query).sort({ createdAt: 1 });
+
+    const sessionData = await Promise.all(
+      sessions.map(async (session) => {
+        const records = await AttendanceRecord.find({ session: session._id });
+        const present = records.filter((r) => r.status === "present").length;
+        const total = records.length;
+        const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+        return {
+          sessionId: session._id,
+          topic: session.topic || "Untitled",
+          present,
+          total,
+          rate,
+          date: session.createdAt,
+          status: session.status,
+        };
+      })
+    );
+
+    res.json({ sessions: sessionData });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;

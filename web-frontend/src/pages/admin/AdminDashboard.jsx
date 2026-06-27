@@ -104,7 +104,7 @@ const coursesLoading   = courseState?.isLoading    ?? false;
       icon: HiOutlineChartBar,
       color: "#ec4899",
       bg: "rgba(236,72,153,0.08)",
-      sublabel: "Available in Phase 3",
+      sublabel: "Live sessions",
       path: null, // disabled
     },
   ];
@@ -133,10 +133,10 @@ const coursesLoading   = courseState?.isLoading    ?? false;
     },
     {
       title: "View Reports",
-      desc: "Coming in Phase 5",
+      desc: "Download attendance reports",
       icon: HiOutlineDocumentReport,
       color: "#a855f7",
-      path: null,
+      path: "/admin/reports",
     },
   ];
 

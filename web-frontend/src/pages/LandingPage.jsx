@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
   HiOutlineQrcode,
   HiOutlineShieldCheck,
@@ -7,22 +9,38 @@ import {
   HiOutlineDeviceMobile,
   HiOutlineBell,
   HiArrowRight,
-  HiCheck,
+  HiOutlineViewGrid,
+  HiOutlineUsers,
+  HiOutlineBookOpen,
 } from "react-icons/hi";
+
+// Screenshots — save your images with these exact names
+import screenshotMobile from "../assets/screenshot-mobile.png";
+import screenshotAdmin from "../assets/screenshot-admin.png";
+import screenshotLecturer from "../assets/screenshot-lecturer.png";
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const { user, token } = useSelector((state) => state.auth);
 
-  // Design tokens
+  // ── If already logged in redirect to their dashboard ──
+  useEffect(() => {
+    if (user && token) {
+      if (user.role === "admin") navigate("/admin/dashboard");
+      else if (user.role === "lecturer") navigate("/lecturer/dashboard");
+      else if (user.role === "student") navigate("/lecturer/dashboard");
+    }
+  }, [user, token, navigate]);
+
   const c = {
-    primary: "#4f46e5",       // Indigo 600
-    primaryDark: "#3730a3",   // Indigo 800
-    primaryLight: "#818cf8",  // Indigo 400
-    accent: "#f43f5e",        // Rose 500
-    text: "#18181b",          // Zinc 900
-    textMuted: "#71717a",     // Zinc 500
-    bg: "#fafafa",            // Zinc 50
-    border: "#e4e4e7",        // Zinc 200
+    primary: "#4f46e5",
+    primaryDark: "#3730a3",
+    primaryLight: "#818cf8",
+    accent: "#f43f5e",
+    text: "#18181b",
+    textMuted: "#71717a",
+    bg: "#fafafa",
+    border: "#e4e4e7",
     surface: "#ffffff",
   };
 
@@ -30,51 +48,96 @@ const LandingPage = () => {
     {
       icon: HiOutlineQrcode,
       title: "Dynamic QR Codes",
-      desc: "Rotating QR codes refresh every 15 seconds to prevent proxy attendance",
+      desc: "Rotating QR codes refresh every 15 seconds to prevent proxy attendance. Screenshots and shared codes are useless.",
       color: "#4f46e5",
     },
     {
       icon: HiOutlineShieldCheck,
       title: "Secure & Reliable",
-      desc: "JWT authentication and role-based access control for all users",
+      desc: "JWT authentication, role-based access control and HMAC-signed tokens protect every request.",
       color: "#10b981",
     },
     {
       icon: HiOutlineLightningBolt,
       title: "Real-time Updates",
-      desc: "Watch attendance roll in live as students scan their QR codes",
+      desc: "Watch attendance roll in live via Socket.io as students scan. No page refresh needed.",
       color: "#f59e0b",
     },
     {
       icon: HiOutlineDeviceMobile,
-      title: "Mobile Friendly",
-      desc: "Students mark attendance instantly through our mobile application",
+      title: "Mobile App",
+      desc: "Students scan QR codes through a dedicated Expo mobile app available on Android and iOS.",
       color: "#ec4899",
     },
     {
       icon: HiOutlineChartBar,
       title: "Smart Reports",
-      desc: "Generate beautiful PDF and CSV reports with attendance analytics",
+      desc: "Generate professional PDF and CSV attendance reports per session, course or student.",
       color: "#8b5cf6",
     },
     {
       icon: HiOutlineBell,
       title: "Guardian Alerts",
-      desc: "Automatic notifications to guardians on absence or low attendance",
+      desc: "Automatic email notifications to guardians when a student is absent or falls below 75% attendance.",
       color: "#06b6d4",
     },
   ];
 
   const stats = [
     { value: "15s", label: "QR Refresh Rate" },
-    { value: "100%", label: "Accurate" },
+    { value: "100%", label: "Proxy-Proof" },
     { value: "3", label: "User Roles" },
     { value: "24/7", label: "Available" },
   ];
 
+  const howItWorks = [
+    {
+      step: "01",
+      role: "Admin",
+      icon: HiOutlineViewGrid,
+      color: "#4f46e5",
+      title: "Admin sets up the system",
+      points: [
+        "Creates lecturer and student accounts",
+        "Bulk imports users via CSV or Excel",
+        "Creates courses and assigns lecturers",
+        "Enrolls students into courses",
+        "Downloads attendance reports",
+      ],
+    },
+    {
+      step: "02",
+      role: "Lecturer",
+      icon: HiOutlineUsers,
+      color: "#10b981",
+      title: "Lecturer runs the session",
+      points: [
+        "Logs in to the web dashboard",
+        "Creates an attendance session for a course",
+        "Displays the rotating QR code on screen",
+        "Watches students mark attendance live",
+        "Closes session when class ends",
+      ],
+    },
+    {
+      step: "03",
+      role: "Student",
+      icon: HiOutlineBookOpen,
+      color: "#f59e0b",
+      title: "Student marks attendance",
+      points: [
+        "Opens the QRoll mobile app",
+        "Logs in with student credentials",
+        "Taps Scan and points at the QR code",
+        "Gets instant confirmation on screen",
+        "Views attendance history anytime",
+      ],
+    },
+  ];
+
   return (
     <div style={{ background: c.bg, minHeight: "100vh", color: c.text }}>
-      {/* Decorative gradient orbs */}
+      {/* Decorative orbs */}
       <div
         style={{
           position: "fixed",
@@ -83,7 +146,8 @@ const LandingPage = () => {
           width: "600px",
           height: "600px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(79,70,229,0.15), transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(79,70,229,0.15), transparent 70%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -96,13 +160,14 @@ const LandingPage = () => {
           width: "700px",
           height: "700px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(244,63,94,0.1), transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(244,63,94,0.08), transparent 70%)",
           pointerEvents: "none",
           zIndex: 0,
         }}
       />
 
-      {/* Navbar */}
+      {/* ── Navbar ── */}
       <nav
         style={{
           position: "sticky",
@@ -140,33 +205,61 @@ const LandingPage = () => {
             <span style={{ fontSize: "16px", fontWeight: 600 }}>QRoll</span>
           </div>
 
-          <button
-            onClick={() => navigate("/login")}
-            style={{
-              padding: "10px 20px",
-              background: c.text,
-              color: "white",
-              border: "none",
-              borderRadius: "10px",
-              fontSize: "13px",
-              fontWeight: 500,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontFamily: "inherit",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = c.primary)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = c.text)}
-          >
-            Sign In
-            <HiArrowRight size={14} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <a
+              href="#how-it-works"
+              style={{
+                fontSize: "13px",
+                color: c.textMuted,
+                textDecoration: "none",
+                fontWeight: 500,
+              }}
+            >
+              How it works
+            </a>
+            <a
+              href="#features"
+              style={{
+                fontSize: "13px",
+                color: c.textMuted,
+                textDecoration: "none",
+                fontWeight: 500,
+              }}
+            >
+              Features
+            </a>
+            <button
+              onClick={() => navigate("/login")}
+              style={{
+                padding: "10px 20px",
+                background: c.text,
+                color: "white",
+                border: "none",
+                borderRadius: "10px",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontFamily: "inherit",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = c.primary)
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = c.text)
+              }
+            >
+              Sign In
+              <HiArrowRight size={14} />
+            </button>
+          </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* ── Hero ── */}
       <section
         style={{
           maxWidth: "1200px",
@@ -178,7 +271,6 @@ const LandingPage = () => {
         }}
         className="fade-in-up"
       >
-        {/* Badge */}
         <div
           style={{
             display: "inline-flex",
@@ -186,7 +278,7 @@ const LandingPage = () => {
             gap: "8px",
             padding: "8px 16px",
             background: "rgba(79,70,229,0.08)",
-            border: `1px solid rgba(79,70,229,0.15)`,
+            border: "1px solid rgba(79,70,229,0.15)",
             borderRadius: "100px",
             fontSize: "12px",
             color: c.primary,
@@ -200,13 +292,11 @@ const LandingPage = () => {
               height: "6px",
               borderRadius: "50%",
               background: c.primary,
-              animation: "pulse-slow 2s infinite",
             }}
           />
           Smart Attendance for Modern Classrooms
         </div>
 
-        {/* Headline */}
         <h1
           style={{
             fontSize: "clamp(40px, 6vw, 72px)",
@@ -230,15 +320,14 @@ const LandingPage = () => {
             color: c.textMuted,
             maxWidth: "560px",
             margin: "0 auto 40px",
-            lineHeight: 1.6,
-            fontWeight: 400,
+            lineHeight: 1.7,
           }}
         >
           A modern QR-based attendance monitoring system designed for the
-          Department of Computer Science. Fast, secure, and proxy-proof.
+          Department of Computer Science. Fast, secure, and completely
+          proxy-proof.
         </p>
 
-        {/* CTA Buttons */}
         <div
           style={{
             display: "flex",
@@ -278,7 +367,8 @@ const LandingPage = () => {
             Get Started
             <HiArrowRight size={16} />
           </button>
-          <button
+          <a
+            href="#how-it-works"
             style={{
               padding: "14px 28px",
               background: "white",
@@ -290,6 +380,9 @@ const LandingPage = () => {
               cursor: "pointer",
               fontFamily: "inherit",
               transition: "all 0.3s",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = c.text;
@@ -298,43 +391,38 @@ const LandingPage = () => {
               e.currentTarget.style.borderColor = c.border;
             }}
           >
-            Learn More
-          </button>
+            See How It Works
+          </a>
         </div>
 
-        {/* Hero Visual - QR Code Mockup */}
+        {/* Hero visual */}
         <div
           style={{
             position: "relative",
-            maxWidth: "640px",
+            maxWidth: "760px",
             margin: "0 auto",
           }}
         >
+          {/* Main card */}
           <div
             style={{
               background: "white",
               borderRadius: "24px",
               padding: "32px",
               boxShadow:
-                "0 30px 80px rgba(79,70,229,0.2), 0 0 0 1px rgba(0,0,0,0.04)",
+                "0 30px 80px rgba(79,70,229,0.15), 0 0 0 1px rgba(0,0,0,0.04)",
               transform: "rotate(-1deg)",
               transition: "transform 0.5s",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "rotate(0deg) translateY(-4px)";
+              e.currentTarget.style.transform =
+                "rotate(0deg) translateY(-4px)";
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "rotate(-1deg) translateY(0)";
             }}
           >
-            {/* Browser dots */}
-            <div
-              style={{
-                display: "flex",
-                gap: "6px",
-                marginBottom: "20px",
-              }}
-            >
+            <div style={{ display: "flex", gap: "6px", marginBottom: "20px" }}>
               {["#fc5b57", "#fdbb2d", "#34c84a"].map((color, i) => (
                 <div
                   key={i}
@@ -348,7 +436,6 @@ const LandingPage = () => {
               ))}
             </div>
 
-            {/* QR Display */}
             <div
               style={{
                 background: `linear-gradient(135deg, ${c.primary}, ${c.primaryDark})`,
@@ -368,7 +455,6 @@ const LandingPage = () => {
               >
                 LIVE SESSION • CSC 301
               </p>
-
               <div
                 style={{
                   background: "white",
@@ -384,7 +470,6 @@ const LandingPage = () => {
               >
                 <HiOutlineQrcode size={120} color={c.primary} />
               </div>
-
               <div
                 style={{
                   display: "inline-flex",
@@ -403,14 +488,12 @@ const LandingPage = () => {
                     height: "6px",
                     borderRadius: "50%",
                     background: "#34d399",
-                    animation: "pulse-slow 1.5s infinite",
                   }}
                 />
                 Refreshing in 12s
               </div>
             </div>
 
-            {/* Mini stats below */}
             <div
               style={{
                 display: "grid",
@@ -438,7 +521,6 @@ const LandingPage = () => {
                       fontSize: "10px",
                       color: c.textMuted,
                       marginBottom: "2px",
-                      letterSpacing: "0.5px",
                     }}
                   >
                     {item.label}
@@ -463,7 +545,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* ── Stats ── */}
       <section
         style={{
           maxWidth: "1200px",
@@ -477,11 +559,11 @@ const LandingPage = () => {
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "24px",
-            padding: "40px",
+            gap: "0",
             background: "white",
             borderRadius: "24px",
             border: `1px solid ${c.border}`,
+            overflow: "hidden",
           }}
         >
           {stats.map((stat, i) => (
@@ -489,6 +571,7 @@ const LandingPage = () => {
               key={i}
               style={{
                 textAlign: "center",
+                padding: "40px 24px",
                 borderRight:
                   i < stats.length - 1 ? `1px solid ${c.border}` : "none",
               }}
@@ -496,8 +579,8 @@ const LandingPage = () => {
               <p
                 style={{
                   fontSize: "36px",
-                  fontWeight: 600,
-                  color: c.text,
+                  fontWeight: 700,
+                  color: c.primary,
                   marginBottom: "4px",
                   letterSpacing: "-0.02em",
                 }}
@@ -512,8 +595,9 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* ── How It Works ── */}
       <section
+        id="how-it-works"
         style={{
           maxWidth: "1200px",
           margin: "0 auto",
@@ -528,7 +612,467 @@ const LandingPage = () => {
               fontSize: "12px",
               color: c.primary,
               letterSpacing: "2px",
-              fontWeight: 500,
+              fontWeight: 600,
+              marginBottom: "12px",
+            }}
+          >
+            HOW IT WORKS
+          </p>
+          <h2
+            style={{
+              fontSize: "clamp(28px, 4vw, 42px)",
+              fontWeight: 700,
+              letterSpacing: "-0.02em",
+              marginBottom: "16px",
+            }}
+          >
+            Three roles, one system.
+          </h2>
+          <p
+            style={{
+              fontSize: "16px",
+              color: c.textMuted,
+              maxWidth: "520px",
+              margin: "0 auto",
+              lineHeight: 1.6,
+            }}
+          >
+            QRoll connects admins, lecturers and students in a seamless
+            attendance workflow.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gap: "24px",
+          }}
+        >
+          {howItWorks.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                background: "white",
+                borderRadius: "20px",
+                border: `1px solid ${c.border}`,
+                overflow: "hidden",
+                transition: "all 0.3s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = `0 20px 40px ${item.color}15`;
+                e.currentTarget.style.borderColor = item.color;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.borderColor = c.border;
+              }}
+            >
+              {/* Card top color bar */}
+              <div
+                style={{
+                  height: "4px",
+                  background: item.color,
+                }}
+              />
+
+              <div style={{ padding: "28px" }}>
+                {/* Step + role */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "40px",
+                      fontWeight: 700,
+                      color: `${item.color}20`,
+                      fontFamily: "JetBrains Mono, monospace",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {item.step}
+                  </span>
+                  <span
+                    style={{
+                      padding: "4px 12px",
+                      background: `${item.color}12`,
+                      color: item.color,
+                      borderRadius: "100px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {item.role}
+                  </span>
+                </div>
+
+                {/* Icon + title */}
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "12px",
+                    background: `${item.color}12`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <item.icon size={22} color={item.color} />
+                </div>
+
+                <h3
+                  style={{
+                    fontSize: "17px",
+                    fontWeight: 700,
+                    color: c.text,
+                    marginBottom: "16px",
+                  }}
+                >
+                  {item.title}
+                </h3>
+
+                {/* Points */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                  }}
+                >
+                  {item.points.map((point, j) => (
+                    <div
+                      key={j}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          borderRadius: "50%",
+                          background: `${item.color}15`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          marginTop: "1px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "6px",
+                            height: "6px",
+                            borderRadius: "50%",
+                            background: item.color,
+                          }}
+                        />
+                      </div>
+                      <p
+                        style={{
+                          fontSize: "13px",
+                          color: c.textMuted,
+                          lineHeight: 1.5,
+                          margin: 0,
+                        }}
+                      >
+                        {point}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Screenshots Section ── */}
+      <section
+        style={{
+          background: `linear-gradient(180deg, ${c.bg} 0%, white 100%)`,
+          padding: "80px 32px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "60px" }}>
+            <p
+              style={{
+                fontSize: "12px",
+                color: c.primary,
+                letterSpacing: "2px",
+                fontWeight: 600,
+                marginBottom: "12px",
+              }}
+            >
+              THE PLATFORM
+            </p>
+            <h2
+              style={{
+                fontSize: "clamp(28px, 4vw, 42px)",
+                fontWeight: 700,
+                letterSpacing: "-0.02em",
+                marginBottom: "16px",
+              }}
+            >
+              Built for every screen.
+            </h2>
+            <p
+              style={{
+                fontSize: "16px",
+                color: c.textMuted,
+                maxWidth: "500px",
+                margin: "0 auto",
+              }}
+            >
+              Web dashboards for admin and lecturers. Mobile app for students.
+              Everything works together.
+            </p>
+          </div>
+
+          {/* Screenshot grid */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "24px",
+              marginBottom: "24px",
+            }}
+          >
+            {/* Admin dashboard screenshot */}
+            <div
+              style={{
+                background: "white",
+                borderRadius: "20px",
+                border: `1px solid ${c.border}`,
+                overflow: "hidden",
+                boxShadow: "0 20px 40px rgba(0,0,0,0.06)",
+                transition: "all 0.3s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow =
+                  "0 30px 60px rgba(79,70,229,0.12)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow =
+                  "0 20px 40px rgba(0,0,0,0.06)";
+              }}
+            >
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderBottom: `1px solid ${c.border}`,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: c.bg,
+                }}
+              >
+                <div style={{ display: "flex", gap: "5px" }}>
+                  {["#fc5b57", "#fdbb2d", "#34c84a"].map((col, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: col,
+                      }}
+                    />
+                  ))}
+                </div>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    color: c.textMuted,
+                    fontFamily: "JetBrains Mono, monospace",
+                  }}
+                >
+                  Admin Dashboard
+                </span>
+              </div>
+              <img
+                src={screenshotAdmin}
+                alt="Admin Dashboard"
+                style={{
+                  width: "100%",
+                  display: "block",
+                  objectFit: "cover",
+                }}
+                onError={(e) => {
+                  e.target.style.display = "none";
+                  e.target.parentElement.style.minHeight = "200px";
+                  e.target.parentElement.style.background = `${c.primary}08`;
+                  e.target.parentElement.innerHTML +=
+                    `<div style="padding:60px;text-align:center;color:${c.textMuted};font-size:13px">Admin Dashboard Screenshot</div>`;
+                }}
+              />
+            </div>
+
+            {/* Lecturer screenshot */}
+            <div
+              style={{
+                background: "white",
+                borderRadius: "20px",
+                border: `1px solid ${c.border}`,
+                overflow: "hidden",
+                boxShadow: "0 20px 40px rgba(0,0,0,0.06)",
+                transition: "all 0.3s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow =
+                  "0 30px 60px rgba(16,185,129,0.12)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow =
+                  "0 20px 40px rgba(0,0,0,0.06)";
+              }}
+            >
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderBottom: `1px solid ${c.border}`,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: c.bg,
+                }}
+              >
+                <div style={{ display: "flex", gap: "5px" }}>
+                  {["#fc5b57", "#fdbb2d", "#34c84a"].map((col, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: col,
+                      }}
+                    />
+                  ))}
+                </div>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    color: c.textMuted,
+                    fontFamily: "JetBrains Mono, monospace",
+                  }}
+                >
+                  Lecturer — Live Session
+                </span>
+              </div>
+              <img
+                src={screenshotLecturer}
+                alt="Lecturer Dashboard"
+                style={{
+                  width: "100%",
+                  display: "block",
+                  objectFit: "cover",
+                }}
+                onError={(e) => {
+                  e.target.style.display = "none";
+                  e.target.parentElement.style.minHeight = "200px";
+                  e.target.parentElement.style.background = `#10b98108`;
+                  e.target.parentElement.innerHTML +=
+                    `<div style="padding:60px;text-align:center;color:${c.textMuted};font-size:13px">Lecturer Dashboard Screenshot</div>`;
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Mobile screenshot — centered smaller */}
+          <div
+            style={{
+              maxWidth: "320px",
+              margin: "0 auto",
+              background: "white",
+              borderRadius: "32px",
+              border: `8px solid ${c.text}`,
+              overflow: "hidden",
+              boxShadow:
+                "0 30px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)",
+              transition: "all 0.3s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-6px) rotate(1deg)";
+              e.currentTarget.style.boxShadow =
+                "0 40px 80px rgba(0,0,0,0.2)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0) rotate(0deg)";
+              e.currentTarget.style.boxShadow =
+                "0 30px 60px rgba(0,0,0,0.15)";
+            }}
+          >
+            {/* Phone notch */}
+            <div
+              style={{
+                background: c.text,
+                padding: "10px",
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <div
+                style={{
+                  width: "80px",
+                  height: "4px",
+                  borderRadius: "2px",
+                  background: "rgba(255,255,255,0.3)",
+                }}
+              />
+            </div>
+            <img
+              src={screenshotMobile}
+              alt="Mobile App"
+              style={{ width: "100%", display: "block" }}
+              onError={(e) => {
+                e.target.style.display = "none";
+                e.target.parentElement.style.minHeight = "400px";
+                e.target.parentElement.style.background = `${c.primary}08`;
+                e.target.parentElement.innerHTML +=
+                  `<div style="padding:80px 40px;text-align:center;color:${c.textMuted};font-size:13px">Mobile App Screenshot</div>`;
+              }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Features ── */}
+      <section
+        id="features"
+        style={{
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "80px 32px",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: "60px" }}>
+          <p
+            style={{
+              fontSize: "12px",
+              color: c.primary,
+              letterSpacing: "2px",
+              fontWeight: 600,
               marginBottom: "12px",
             }}
           >
@@ -573,7 +1117,7 @@ const LandingPage = () => {
                 borderRadius: "20px",
                 border: `1px solid ${c.border}`,
                 transition: "all 0.3s",
-                cursor: "pointer",
+                cursor: "default",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-4px)";
@@ -624,7 +1168,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* ── CTA ── */}
       <section
         style={{
           maxWidth: "1200px",
@@ -656,6 +1200,17 @@ const LandingPage = () => {
               background: `radial-gradient(circle, ${c.accent}40, transparent 70%)`,
             }}
           />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "-80px",
+              left: "-80px",
+              width: "240px",
+              height: "240px",
+              borderRadius: "50%",
+              background: `radial-gradient(circle, ${c.primaryLight}30, transparent 70%)`,
+            }}
+          />
           <div style={{ position: "relative", zIndex: 1 }}>
             <h2
               style={{
@@ -674,10 +1229,11 @@ const LandingPage = () => {
                 marginBottom: "32px",
                 maxWidth: "480px",
                 margin: "0 auto 32px",
+                lineHeight: 1.6,
               }}
             >
               Join the modern way of tracking attendance. Sign in to your
-              dashboard now.
+              dashboard and take control today.
             </p>
             <button
               onClick={() => navigate("/login")}
@@ -698,7 +1254,8 @@ const LandingPage = () => {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 20px 40px rgba(0,0,0,0.3)";
+                e.currentTarget.style.boxShadow =
+                  "0 20px 40px rgba(0,0,0,0.3)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
@@ -712,19 +1269,61 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <footer
         style={{
           borderTop: `1px solid ${c.border}`,
-          padding: "32px",
-          textAlign: "center",
+          padding: "40px 32px",
           position: "relative",
           zIndex: 1,
         }}
       >
-        <p style={{ fontSize: "13px", color: c.textMuted }}>
-          © 2026 QRoll • HND Computer Science Project
-        </p>
+        <div
+          style={{
+            maxWidth: "1200px",
+            margin: "0 auto",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "16px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "8px",
+                background: `linear-gradient(135deg, ${c.primary}, ${c.primaryLight})`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <HiOutlineQrcode size={16} color="white" />
+            </div>
+            <span style={{ fontSize: "14px", fontWeight: 600 }}>QRoll</span>
+          </div>
+          <p style={{ fontSize: "13px", color: c.textMuted }}>
+            © 2026 QRoll • HND Computer Science Final Year Project
+          </p>
+          <div style={{ display: "flex", gap: "20px" }}>
+            {["How it works", "Features"].map((link) => (
+              <a
+                key={link}
+                href={`#${link.toLowerCase().replace(" ", "-")}`}
+                style={{
+                  fontSize: "13px",
+                  color: c.textMuted,
+                  textDecoration: "none",
+                }}
+              >
+                {link}
+              </a>
+            ))}
+          </div>
+        </div>
       </footer>
     </div>
   );

@@ -13,6 +13,7 @@ const {
   getSessionAttendance,
   updateAttendanceRecord,
 } = require("../controllers/lecturerController");
+const { sessionReport, courseReport } = require("../controllers/reportController");
 
 // All routes require login + lecturer role
 router.use(protect, authorize("lecturer"));
@@ -27,9 +28,10 @@ router.get("/sessions", getMySessions);
 router.get("/sessions/:id", getSessionById);
 router.put("/sessions/:id/close", closeSession);
 router.get("/sessions/:id/attendance", getSessionAttendance);
-router.put(
-  "/sessions/:id/attendance/:studentId",
-  updateAttendanceRecord
-);
+router.put("/sessions/:id/attendance/:studentId", updateAttendanceRecord);
+
+// ── Reports ──
+router.get("/reports/session/:id", sessionReport);
+router.get("/reports/course/:id", courseReport);
 
 module.exports = router;

@@ -118,7 +118,7 @@ const getAllCourses = async (req, res) => {
     // Format with lecturer name and student count
     // IMPORTANT: use fullName (matches User.js) not firstName/lastName
     const formatted = courses.map((course) => ({
-      id: course._id,
+      id: course._id || course.id,
       courseCode: course.courseCode,
       courseTitle: course.courseTitle,
       creditUnits: course.creditUnits,
@@ -439,7 +439,7 @@ const assignStudents = async (req, res) => {
     // This makes courseCount work on Students page
     await Student.updateMany(
       { _id: { $in: studentIds } },
-      { $addToSet: { courses: req.params.id } }
+      { $addToSet: { enrolledCourses: req.params.id } }
     );
 
     res.status(200).json({
@@ -485,7 +485,7 @@ const removeStudent = async (req, res) => {
 
     // Also remove course from student's courses array
     await Student.findByIdAndUpdate(studentId, {
-      $pull: { courses: courseId },
+      $pull: { enrolledCourses: courseId },
     });
 
     res.status(200).json({
