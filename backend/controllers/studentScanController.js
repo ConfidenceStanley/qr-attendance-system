@@ -168,7 +168,7 @@ const scanQR = async (req, res, next) => {
 const getStudentDashboard = async (req, res, next) => {
   try {
     const student = await Student.findOne({ user: req.user._id }).populate(
-      "courses",
+      "enrolledCourses",  // ← was "courses"
       "courseCode courseTitle"
     );
 
@@ -176,9 +176,8 @@ const getStudentDashboard = async (req, res, next) => {
       return res.status(404).json({ message: "Student profile not found" });
     }
 
-    // Calculate attendance % per course
     const courseStats = await Promise.all(
-      student.courses.map(async (course) => {
+      student.enrolledCourses.map(async (course) => {  // ← was student.courses
         const total = await AttendanceRecord.countDocuments({
           student: student._id,
           course: course._id,
@@ -202,19 +201,16 @@ const getStudentDashboard = async (req, res, next) => {
           present,
           absent: total - present,
           percentage,
-          // Flag courses below 75% threshold
           belowThreshold: percentage < 75 && total > 0,
         };
       })
     );
 
-    // Overall percentage across all courses
     const totalClasses = courseStats.reduce((sum, c) => sum + c.total, 0);
     const totalPresent = courseStats.reduce((sum, c) => sum + c.present, 0);
     const overallPercentage =
       totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0;
 
-    // Last 5 attendance records
     const recentScans = await AttendanceRecord.find({
       student: student._id,
       status: "present",
@@ -248,15 +244,18 @@ const getStudentDashboard = async (req, res, next) => {
 const getStudentCourses = async (req, res, next) => {
   try {
     const student = await Student.findOne({ user: req.user._id }).populate({
-      path: "courses",
-      populate: { path: "lecturer", populate: { path: "user", select: "fullName" } },
+      path: "enrolledCourses",  // ← was "courses"
+      populate: {
+        path: "lecturer",
+        populate: { path: "user", select: "fullName" },
+      },
     });
 
     if (!student) {
       return res.status(404).json({ message: "Student profile not found" });
     }
 
-    res.json({ courses: student.courses });
+    res.json({ courses: student.enrolledCourses });  // ← was student.courses
   } catch (err) {
     next(err);
   }
