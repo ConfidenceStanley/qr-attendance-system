@@ -81,16 +81,53 @@ export const assignStudentsToCourse = createAsyncThunk(
   }
 );
 
+// Fetches filtered students for the enrollment modal only — does not touch studentSlice
+export const fetchStudentsForEnrollment = createAsyncThunk(
+  "courses/fetchStudentsForEnrollment",
+  async (params = {}, { rejectWithValue }) => {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const url = queryString ? `/admin/students?${queryString}` : "/admin/students";
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch students");
+    }
+  }
+);
+
+// Fetches filtered lecturers for the assign lecturer modal only — does not touch lecturerSlice
+export const fetchLecturersForAssignment = createAsyncThunk(
+  "courses/fetchLecturersForAssignment",
+  async (params = {}, { rejectWithValue }) => {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const url = queryString ? `/admin/lecturers?${queryString}` : "/admin/lecturers";
+      const response = await axiosInstance.get(url);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch lecturers");
+    }
+  }
+);
+
 const courseSlice = createSlice({
   name: "courses",
   initialState: {
     list: [],
+    // Separate lists for assignment modals — keeps main lists clean
+    enrollmentStudents: [],
+    assignmentLecturers: [],
     isLoading: false,
     isSubmitting: false,
+    isLoadingEnrollment: false,
+    isLoadingAssignment: false,
     error: null,
   },
   reducers: {
     clearError: (state) => { state.error = null; },
+    clearEnrollmentStudents: (state) => { state.enrollmentStudents = []; },
+    clearAssignmentLecturers: (state) => { state.assignmentLecturers = []; },
   },
   extraReducers: (builder) => {
     builder
@@ -120,10 +157,7 @@ const courseSlice = createSlice({
       .addCase(updateCourse.pending, (state) => { state.isSubmitting = true; })
       .addCase(updateCourse.fulfilled, (state, action) => {
         state.isSubmitting = false;
-        // Fixed: use _id instead of id
-        const index = state.list.findIndex(
-          (c) => c._id === action.payload.data._id
-        );
+        const index = state.list.findIndex((c) => c._id === action.payload.data._id);
         if (index !== -1) state.list[index] = action.payload.data;
       })
       .addCase(updateCourse.rejected, (state, action) => {
@@ -134,7 +168,6 @@ const courseSlice = createSlice({
       .addCase(deleteCourse.pending, (state) => { state.isSubmitting = true; })
       .addCase(deleteCourse.fulfilled, (state, action) => {
         state.isSubmitting = false;
-        // Fixed: use _id instead of id
         const course = state.list.find((c) => c._id === action.payload);
         if (course) course.isActive = false;
       })
@@ -155,9 +188,33 @@ const courseSlice = createSlice({
       .addCase(assignStudentsToCourse.rejected, (state, action) => {
         state.isSubmitting = false;
         state.error = action.payload;
+      })
+
+      // Enrollment students — stored separately, only used inside the modal
+      .addCase(fetchStudentsForEnrollment.pending, (state) => {
+        state.isLoadingEnrollment = true;
+      })
+      .addCase(fetchStudentsForEnrollment.fulfilled, (state, action) => {
+        state.isLoadingEnrollment = false;
+        state.enrollmentStudents = action.payload.data;
+      })
+      .addCase(fetchStudentsForEnrollment.rejected, (state) => {
+        state.isLoadingEnrollment = false;
+      })
+
+      // Assignment lecturers — stored separately, only used inside the modal
+      .addCase(fetchLecturersForAssignment.pending, (state) => {
+        state.isLoadingAssignment = true;
+      })
+      .addCase(fetchLecturersForAssignment.fulfilled, (state, action) => {
+        state.isLoadingAssignment = false;
+        state.assignmentLecturers = action.payload.data;
+      })
+      .addCase(fetchLecturersForAssignment.rejected, (state) => {
+        state.isLoadingAssignment = false;
       });
   },
 });
 
-export const { clearError } = courseSlice.actions;
+export const { clearError, clearEnrollmentStudents, clearAssignmentLecturers } = courseSlice.actions;
 export default courseSlice.reducer;

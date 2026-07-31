@@ -170,19 +170,16 @@ const createStudent = async (req, res) => {
 // ─────────────────────────────────────────────
 const getAllStudents = async (req, res) => {
   try {
-    const { search, level } = req.query;
+    const { search, level, department } = req.query; // add department here
 
-    // Build student-level filter
     let studentFilter = {};
     if (level) studentFilter.level = level;
+    if (department) studentFilter.department = department; // add this line
 
-    // Fetch all (or level-filtered) students with user data
     const students = await Student.find(studentFilter)
       .populate("user", "-password")
       .sort({ createdAt: -1 });
 
-    // Apply search filter after populate
-    // because fullName and email are on the User document
     let filtered = students;
     if (search) {
       const query = search.toLowerCase();
@@ -190,16 +187,10 @@ const getAllStudents = async (req, res) => {
         const name = s.user?.fullName?.toLowerCase() || "";
         const email = s.user?.email?.toLowerCase() || "";
         const sid = s.studentId?.toLowerCase() || "";
-
-        return (
-          name.includes(query) ||
-          email.includes(query) ||
-          sid.includes(query)
-        );
+        return name.includes(query) || email.includes(query) || sid.includes(query);
       });
     }
 
-    // Format into flat clean response
     const formatted = filtered.map((student) => ({
       id: student._id,
       userId: student.user?._id,
