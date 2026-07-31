@@ -22,6 +22,14 @@ export const getUser = async () => {
   return user ? JSON.parse(user) : null;
 };
 
+// Update specific fields on the stored user without replacing everything
+export const updateStoredUser = async (fields) => {
+  const existing = await getUser();
+  if (existing) {
+    await saveUser({ ...existing, ...fields });
+  }
+};
+
 export const clearStorage = async () => {
   await AsyncStorage.multiRemove([KEYS.TOKEN, KEYS.USER]);
 };

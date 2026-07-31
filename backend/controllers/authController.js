@@ -156,6 +156,7 @@ const login = async (req, res, next) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        faceEnrolled: user.faceEnrolled,   // ← added
         profile: profileData,
       },
     });
@@ -207,6 +208,7 @@ const getMe = async (req, res, next) => {
         email: user.email,
         role: user.role,
         lastLogin: user.lastLogin,
+        faceEnrolled: user.faceEnrolled,   // ← added
         profile: profileData,
       },
     });

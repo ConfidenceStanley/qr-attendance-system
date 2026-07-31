@@ -13,9 +13,9 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useDispatch, useSelector } from 'react-redux';
 import { verifyFace, cancelPendingAuth, clearFaceError } from '../../redux/slices/authSlice';
 
-const { width } = Dimensions.get('window');
-const FACE_BOX = width * 0.65;
-const OVAL_HEIGHT = FACE_BOX * 1.2;
+const { width, height } = Dimensions.get('window');
+const FACE_BOX = width * 0.72;         // bigger
+const OVAL_HEIGHT = FACE_BOX * 1.25;
 const MAX_ATTEMPTS = 3;
 
 const COLORS = {
@@ -30,17 +30,17 @@ const COLORS = {
 
 const FaceVerifyScreen = () => {
   const dispatch = useDispatch();
-  const { isFaceLoading } = useSelector((state) => state.auth);
 
   const [permission, requestPermission] = useCameraPermissions();
   const [isCapturing, setIsCapturing] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [locked, setLocked] = useState(false);
   const [localError, setLocalError] = useState(null);
+  const [showIntro, setShowIntro] = useState(true);
+  const [cameraKey, setCameraKey] = useState(Date.now()); // forces remount
   const cameraRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  // Pulse the capture button
   useEffect(() => {
     const pulse = Animated.loop(
       Animated.sequence([
@@ -52,9 +52,14 @@ const FaceVerifyScreen = () => {
     return () => pulse.stop();
   }, []);
 
+  const handleStartCamera = () => {
+    // Force a fresh camera mount by changing the key
+    setCameraKey(Date.now());
+    setShowIntro(false);
+  };
+
   const handleVerify = async () => {
     if (!cameraRef.current || isCapturing || locked) return;
-
     setIsCapturing(true);
     setLocalError(null);
     dispatch(clearFaceError());
@@ -69,19 +74,15 @@ const FaceVerifyScreen = () => {
       const result = await dispatch(verifyFace({ imageBase64: photo.base64 }));
 
       if (verifyFace.fulfilled.match(result)) {
-        // authSlice sets isAuthenticated = true → AppNavigator auto navigates to Dashboard
-        // Nothing needed here
+        // Redux updates isAuthenticated → AppNavigator switches to Dashboard
       } else {
         const newAttempts = attempts + 1;
         setAttempts(newAttempts);
         setIsCapturing(false);
-
         if (newAttempts >= MAX_ATTEMPTS) {
           setLocked(true);
         } else {
-          setLocalError(
-            result.payload || 'Face does not match. Please try again.'
-          );
+          setLocalError(result.payload || 'Face does not match. Please try again.');
         }
       }
     } catch (error) {
@@ -96,16 +97,11 @@ const FaceVerifyScreen = () => {
       'You will be returned to the login screen.',
       [
         { text: 'Stay', style: 'cancel' },
-        {
-          text: 'Cancel Login',
-          style: 'destructive',
-          onPress: () => dispatch(cancelPendingAuth()),
-        },
+        { text: 'Cancel Login', style: 'destructive', onPress: () => dispatch(cancelPendingAuth()) },
       ]
     );
   };
 
-  // ── Permission loading ──
   if (!permission) {
     return (
       <View style={styles.center}>
@@ -114,7 +110,6 @@ const FaceVerifyScreen = () => {
     );
   }
 
-  // ── Permission denied ──
   if (!permission.granted) {
     return (
       <View style={styles.center}>
@@ -137,7 +132,6 @@ const FaceVerifyScreen = () => {
     );
   }
 
-  // ── Locked screen after 3 failed attempts ──
   if (locked) {
     return (
       <View style={styles.lockedScreen}>
@@ -147,7 +141,7 @@ const FaceVerifyScreen = () => {
           </View>
           <Text style={styles.cardTitle}>Too Many Attempts</Text>
           <Text style={styles.cardText}>
-            Face verification failed {MAX_ATTEMPTS} times. Please contact your admin or try logging in again.
+            Face verification failed {MAX_ATTEMPTS} times. Please contact your admin or try again later.
           </Text>
           <TouchableOpacity
             style={[styles.primaryBtn, { backgroundColor: COLORS.danger }]}
@@ -160,18 +154,41 @@ const FaceVerifyScreen = () => {
     );
   }
 
-  // ── Camera screen ──
+  // Intro screen forces fresh camera mount when user clicks continue
+  if (showIntro) {
+    return (
+      <View style={styles.introScreen}>
+        <View style={styles.card}>
+          <View style={styles.iconCircle}>
+            <Text style={styles.iconEmoji}>🔐</Text>
+          </View>
+          <Text style={styles.cardTitle}>Verify Your Face</Text>
+          <Text style={styles.cardText}>
+            Position your face inside the oval and tap the capture button to log in.
+          </Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={handleStartCamera}>
+            <Text style={styles.primaryBtnText}>Open Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.ghostBtn} onPress={handleCancel}>
+            <Text style={styles.ghostBtnText}>Cancel Login</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Live camera */}
+      {/* key forces full remount so camera activates cleanly */}
       <CameraView
+        key={cameraKey}
         ref={cameraRef}
         style={StyleSheet.absoluteFillObject}
         facing="front"
       />
 
-      {/* Overlay */}
-      <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+      {/* Overlay with centered oval */}
+      <View pointerEvents="none" style={styles.overlayWrapper}>
         <View style={styles.overlayTop} />
         <View style={styles.overlayMiddle}>
           <View style={styles.overlaySide} />
@@ -181,7 +198,7 @@ const FaceVerifyScreen = () => {
         <View style={styles.overlayBottom} />
       </View>
 
-      {/* Corner guides */}
+      {/* Corner guides positioned over the oval */}
       <View pointerEvents="none" style={styles.cornersWrapper}>
         <View style={[styles.corner, styles.cornerTL]} />
         <View style={[styles.corner, styles.cornerTR]} />
@@ -198,7 +215,6 @@ const FaceVerifyScreen = () => {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Attempts warning */}
       {attempts > 0 && !localError && (
         <View style={styles.warningBanner}>
           <Text style={styles.warningBannerText}>
@@ -207,7 +223,6 @@ const FaceVerifyScreen = () => {
         </View>
       )}
 
-      {/* Error banner — stays on camera screen */}
       {localError ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{localError}</Text>
@@ -219,7 +234,6 @@ const FaceVerifyScreen = () => {
         </View>
       ) : null}
 
-      {/* Bottom controls */}
       <View style={styles.bottomControls}>
         {isCapturing ? (
           <>
@@ -229,9 +243,7 @@ const FaceVerifyScreen = () => {
         ) : (
           <>
             <Text style={styles.bottomHint}>
-              {localError
-                ? 'Ensure good lighting and try again'
-                : 'Look directly at the camera'}
+              {localError ? 'Ensure good lighting and try again' : 'Look directly at the camera'}
             </Text>
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
               <TouchableOpacity style={styles.captureBtn} onPress={handleVerify}>
@@ -246,38 +258,20 @@ const FaceVerifyScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.black,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f4f4f5',
-    padding: 24,
-  },
-  lockedScreen: {
-    flex: 1,
-    backgroundColor: COLORS.danger,
-    justifyContent: 'center',
-    padding: 24,
-  },
+// Calculate positions to center the oval vertically on visible screen
+const OVAL_TOP_OFFSET = (height - OVAL_HEIGHT) / 2 - 60; // slight shift up to leave room for buttons
 
-  // Overlay
-  overlayTop: {
-    height: '15%',
-    backgroundColor: COLORS.overlay,
-  },
-  overlayMiddle: {
-    flexDirection: 'row',
-    height: OVAL_HEIGHT,
-  },
-  overlaySide: {
-    flex: 1,
-    backgroundColor: COLORS.overlay,
-  },
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.black },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f4f4f5', padding: 24 },
+  introScreen: { flex: 1, backgroundColor: COLORS.primary, justifyContent: 'center', padding: 24 },
+  lockedScreen: { flex: 1, backgroundColor: COLORS.danger, justifyContent: 'center', padding: 24 },
+
+  // Overlay — oval is now vertically centered on visible screen
+  overlayWrapper: { ...StyleSheet.absoluteFillObject },
+  overlayTop: { height: OVAL_TOP_OFFSET, backgroundColor: COLORS.overlay },
+  overlayMiddle: { flexDirection: 'row', height: OVAL_HEIGHT },
+  overlaySide: { flex: 1, backgroundColor: COLORS.overlay },
   faceOval: {
     width: FACE_BOX,
     height: OVAL_HEIGHT,
@@ -285,195 +279,99 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     overflow: 'hidden',
   },
-  overlayBottom: {
-    flex: 1,
-    backgroundColor: COLORS.overlay,
-  },
+  overlayBottom: { flex: 1, backgroundColor: COLORS.overlay },
 
-  // Corner guides
   cornersWrapper: {
     position: 'absolute',
-    top: '15%',
+    top: OVAL_TOP_OFFSET,
     alignSelf: 'center',
     width: FACE_BOX,
     height: OVAL_HEIGHT,
   },
-  corner: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderColor: COLORS.primary,
-  },
-  cornerTL: { top: 12, left: 12, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 8 },
-  cornerTR: { top: 12, right: 12, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 8 },
-  cornerBL: { bottom: 12, left: 12, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 8 },
-  cornerBR: { bottom: 12, right: 12, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
+  corner: { position: 'absolute', width: 30, height: 30, borderColor: COLORS.primary },
+  cornerTL: { top: 14, left: 14, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 8 },
+  cornerTR: { top: 14, right: 14, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 8 },
+  cornerBL: { bottom: 14, left: 14, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 8 },
+  cornerBR: { bottom: 14, right: 14, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
 
-  // Top bar
   topBar: {
-    position: 'absolute',
-    top: 52,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    position: 'absolute', top: 52, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, zIndex: 10,
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
-  closeTxt: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  topTitle: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  closeTxt: { color: COLORS.white, fontSize: 18, fontWeight: '600' },
+  topTitle: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
 
-  // Banners
   warningBanner: {
-    position: 'absolute',
-    top: 110,
-    left: 20,
-    right: 20,
+    position: 'absolute', top: 110, left: 20, right: 20,
     backgroundColor: 'rgba(245,158,11,0.92)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
+    borderRadius: 12, padding: 12, alignItems: 'center', zIndex: 10,
   },
-  warningBannerText: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  errorBanner: {
-    position: 'absolute',
-    top: 110,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(244,63,94,0.92)',
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    gap: 4,
-  },
-  errorBannerText: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  errorBannerSub: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    fontWeight: '500',
-  },
+  warningBannerText: { color: COLORS.white, fontSize: 13, fontWeight: '700' },
 
-  // Bottom controls
+  errorBanner: {
+    position: 'absolute', top: 110, left: 20, right: 20,
+    backgroundColor: 'rgba(244,63,94,0.92)',
+    borderRadius: 12, padding: 14, alignItems: 'center', gap: 4, zIndex: 10,
+  },
+  errorBannerText: { color: COLORS.white, fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  errorBannerSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '500' },
+
   bottomControls: {
-    position: 'absolute',
-    bottom: 56,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    gap: 14,
+    position: 'absolute', bottom: 40, left: 0, right: 0,
+    alignItems: 'center', gap: 14, zIndex: 10,
   },
   bottomHint: {
-    color: COLORS.white,
-    fontSize: 14,
-    opacity: 0.85,
-    textAlign: 'center',
-    paddingHorizontal: 32,
+    color: COLORS.white, fontSize: 14, opacity: 0.85,
+    textAlign: 'center', paddingHorizontal: 32,
   },
   captureBtn: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 76, height: 76, borderRadius: 38,
     backgroundColor: 'rgba(255,255,255,0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: COLORS.white,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 3, borderColor: COLORS.white,
   },
   captureBtnInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 58, height: 58, borderRadius: 29,
     backgroundColor: COLORS.white,
   },
-  captureLabel: {
-    color: COLORS.white,
-    fontSize: 12,
-    opacity: 0.6,
-  },
+  captureLabel: { color: COLORS.white, fontSize: 12, opacity: 0.6 },
 
-  // Shared card
   card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    gap: 14,
-    width: '100%',
+    backgroundColor: COLORS.white, borderRadius: 24, padding: 32,
+    alignItems: 'center', gap: 14, width: '100%',
   },
   iconCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 76, height: 76, borderRadius: 38,
     backgroundColor: '#eff6ff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
     marginBottom: 4,
   },
-  iconEmoji: {
-    fontSize: 38,
-  },
+  iconEmoji: { fontSize: 38 },
   cardTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#18181b',
-    letterSpacing: -0.5,
-    textAlign: 'center',
+    fontSize: 22, fontWeight: '800', color: '#18181b',
+    letterSpacing: -0.5, textAlign: 'center',
   },
   cardText: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    lineHeight: 21,
+    fontSize: 14, color: COLORS.textMuted,
+    textAlign: 'center', lineHeight: 21,
   },
   primaryBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 4,
+    backgroundColor: COLORS.primary, borderRadius: 12,
+    paddingVertical: 16, width: '100%',
+    alignItems: 'center', marginTop: 4,
   },
   primaryBtnText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: '700',
+    color: COLORS.white, fontSize: 15, fontWeight: '700',
     letterSpacing: -0.2,
   },
-  ghostBtn: {
-    paddingVertical: 14,
-    width: '100%',
-    alignItems: 'center',
-  },
-  ghostBtnText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  ghostBtn: { paddingVertical: 14, width: '100%', alignItems: 'center' },
+  ghostBtnText: { color: COLORS.textMuted, fontSize: 14, fontWeight: '600' },
 });
 
 export default FaceVerifyScreen;

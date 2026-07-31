@@ -1,9 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosInstance from '../../api/axiosInstance';
-import { saveToken, saveUser, clearStorage, getToken, getUser } from '../../utils/storage';
+import {
+  saveToken,
+  saveUser,
+  clearStorage,
+  getToken,
+  getUser,
+  updateStoredUser,
+} from '../../utils/storage';
 
-// Password login — returns token + user but does NOT set isAuthenticated yet
-// Navigation will move to FaceEnrol or FaceVerify first
 export const loginStudent = createAsyncThunk(
   'auth/loginStudent',
   async ({ email, password }, { rejectWithValue }) => {
@@ -15,7 +20,6 @@ export const loginStudent = createAsyncThunk(
         return rejectWithValue('This app is for students only. Please use the web portal.');
       }
 
-      // Save token immediately so face endpoints can use it
       await saveToken(token);
       await saveUser(user);
       return { token, user };
@@ -27,12 +31,13 @@ export const loginStudent = createAsyncThunk(
   }
 );
 
-// Enrol face — called once on first login
 export const enrolFace = createAsyncThunk(
   'auth/enrolFace',
   async ({ imageBase64 }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post('/auth/face/enrol', { imageBase64 });
+      // Update stored user so next session restore knows face is enrolled
+      await updateStoredUser({ faceEnrolled: true });
       return response.data;
     } catch (error) {
       return rejectWithValue(
@@ -42,7 +47,6 @@ export const enrolFace = createAsyncThunk(
   }
 );
 
-// Verify face — called on every login after enrolment
 export const verifyFace = createAsyncThunk(
   'auth/verifyFace',
   async ({ imageBase64 }, { rejectWithValue }) => {
@@ -57,6 +61,8 @@ export const verifyFace = createAsyncThunk(
   }
 );
 
+// Restore session — puts user into pendingAuth so face verify always runs
+// Face is NOT skipped on app reopen
 export const restoreSession = createAsyncThunk(
   'auth/restoreSession',
   async (_, { rejectWithValue }) => {
@@ -83,11 +89,10 @@ const authSlice = createSlice({
   initialState: {
     user: null,
     token: null,
-    isAuthenticated: false,  // true only AFTER face passes
+    isAuthenticated: false,
     isRestoring: true,
     isLoading: false,
     isFaceLoading: false,
-    // Holds token+user between password login and face verification
     pendingAuth: null,
     error: null,
     faceError: null,
@@ -95,16 +100,6 @@ const authSlice = createSlice({
   reducers: {
     clearError: (state) => { state.error = null; },
     clearFaceError: (state) => { state.faceError = null; },
-    // Called after face passes — finalise authentication
-    completeAuth: (state) => {
-      if (state.pendingAuth) {
-        state.user = state.pendingAuth.user;
-        state.token = state.pendingAuth.token;
-        state.isAuthenticated = true;
-        state.pendingAuth = null;
-      }
-    },
-    // Called if user cancels face or logs out from face screen
     cancelPendingAuth: (state) => {
       state.pendingAuth = null;
       state.error = null;
@@ -112,7 +107,7 @@ const authSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Password login — only sets pendingAuth, not isAuthenticated
+    // Password login — sets pendingAuth only, not isAuthenticated
     builder
       .addCase(loginStudent.pending, (state) => {
         state.isLoading = true;
@@ -120,22 +115,21 @@ const authSlice = createSlice({
       })
       .addCase(loginStudent.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.pendingAuth = action.payload; // wait for face
+        state.pendingAuth = action.payload;
       })
       .addCase(loginStudent.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });
 
-    // Face enrolment
+    // Face enrolment — update pendingAuth user so AppNavigator switches to FaceVerify
     builder
       .addCase(enrolFace.pending, (state) => {
         state.isFaceLoading = true;
         state.faceError = null;
       })
-      .addCase(enrolFace.fulfilled, (state, action) => {
+      .addCase(enrolFace.fulfilled, (state) => {
         state.isFaceLoading = false;
-        // Update faceEnrolled on the pending user so navigator knows
         if (state.pendingAuth?.user) {
           state.pendingAuth.user.faceEnrolled = true;
         }
@@ -145,7 +139,7 @@ const authSlice = createSlice({
         state.faceError = action.payload;
       });
 
-    // Face verification
+    // Face verify — only here does isAuthenticated become true
     builder
       .addCase(verifyFace.pending, (state) => {
         state.isFaceLoading = true;
@@ -153,7 +147,6 @@ const authSlice = createSlice({
       })
       .addCase(verifyFace.fulfilled, (state) => {
         state.isFaceLoading = false;
-        // Face passed — complete login
         if (state.pendingAuth) {
           state.user = state.pendingAuth.user;
           state.token = state.pendingAuth.token;
@@ -166,18 +159,21 @@ const authSlice = createSlice({
         state.faceError = action.payload;
       });
 
-    // Restore session — skip face (already verified in previous session)
+    // Restore session — goes to pendingAuth NOT isAuthenticated
+    // This forces face verify every time the app opens
     builder
-      .addCase(restoreSession.pending, (state) => { state.isRestoring = true; })
+      .addCase(restoreSession.pending, (state) => {
+        state.isRestoring = true;
+      })
       .addCase(restoreSession.fulfilled, (state, action) => {
         state.isRestoring = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        // Put into pendingAuth — face verify will run before dashboard
+        state.pendingAuth = action.payload;
       })
       .addCase(restoreSession.rejected, (state) => {
         state.isRestoring = false;
         state.isAuthenticated = false;
+        state.pendingAuth = null;
       });
 
     builder.addCase(logoutStudent.fulfilled, (state) => {
@@ -189,5 +185,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, clearFaceError, completeAuth, cancelPendingAuth } = authSlice.actions;
+export const { clearError, clearFaceError, cancelPendingAuth } = authSlice.actions;
 export default authSlice.reducer;
