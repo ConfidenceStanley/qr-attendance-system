@@ -34,30 +34,35 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Face verification fields
+    faceEnrolled: {
+      type: Boolean,
+      default: false,
+    },
+    faceDescriptor: {
+      // 128-point float array from face-api.js
+      type: [Number],
+      default: null,
+      select: false, // never sent to client
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Hash password before saving - NO next parameter
 userSchema.pre("save", async function () {
-  if (!this.isModified("password")) {
-    return;
-  }
+  if (!this.isModified("password")) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Method to compare passwords
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Remove password from JSON response
 userSchema.methods.toJSON = function () {
   const user = this.toObject();
   delete user.password;
+  delete user.faceDescriptor;
   return user;
 };
 

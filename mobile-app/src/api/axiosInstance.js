@@ -5,18 +5,14 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 30000, // increased from 10s — face-api processing takes longer
+  headers: { 'Content-Type': 'application/json' },
 });
 
 axiosInstance.interceptors.request.use(
   async (config) => {
     const token = await getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error)
@@ -25,9 +21,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      await clearStorage();
-    }
+    if (error.response?.status === 401) await clearStorage();
     return Promise.reject(error);
   }
 );
