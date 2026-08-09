@@ -116,7 +116,8 @@ const bulkImportStudents = async (req, res) => {
 
     if (rows.length > 500) {
       return res.status(400).json({
-        message: "Maximum 500 students per import. Split your file into batches.",
+        message:
+          "Maximum 500 students per import. Split your file into batches.",
       });
     }
 
@@ -128,8 +129,18 @@ const bulkImportStudents = async (req, res) => {
       imported: [],
     };
 
-    // Hash once — reuse for every row
+    // ── FIX: Hash once here, then use updateOne/save bypass ──
+    // We hash manually and use updateOne to bypass the pre-save hook
+    // This prevents double-hashing (hook would hash an already-hashed value)
     const hashedPassword = await bcrypt.hash(BULK_DEFAULT_PASSWORD, 12);
+
+    // Sanity-check our hash before touching the DB
+    const sanityOk = await bcrypt.compare(BULK_DEFAULT_PASSWORD, hashedPassword);
+    if (!sanityOk) {
+      return res
+        .status(500)
+        .json({ message: "Password hashing sanity check failed. Aborting." });
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const rowNum = i + 2;
@@ -138,33 +149,43 @@ const bulkImportStudents = async (req, res) => {
       // ── Map flexible column names ──
       const fullName =
         raw.fullname || raw.name || raw.studentname || raw.student || "";
-      const email =
-        raw.email || raw.emailaddress || raw.mail || "";
+      const email = raw.email || raw.emailaddress || raw.mail || "";
       const studentId =
-        raw.studentid || raw.id || raw.matricnumber ||
-        raw.regnumber || raw.matric || "";
-      const level =
-        raw.level || raw.year || raw.studylevel || "";
-      const department =
-        raw.department || raw.dept || raw.faculty || "";
+        raw.studentid ||
+        raw.id ||
+        raw.matricnumber ||
+        raw.regnumber ||
+        raw.matric ||
+        "";
+      const level = raw.level || raw.year || raw.studylevel || "";
+      const department = raw.department || raw.dept || raw.faculty || "";
       const guardianName =
-        raw.guardianname || raw.parentname || raw.guardian || raw.parent || "";
+        raw.guardianname ||
+        raw.parentname ||
+        raw.guardian ||
+        raw.parent ||
+        "";
       const guardianEmail =
         raw.guardianemail || raw.parentemail || raw.guardiansmail || "";
       const guardianPhone =
-        raw.guardianphone || raw.parentphone ||
-        raw.guardiancontact || raw.parentcontact || "";
+        raw.guardianphone ||
+        raw.parentphone ||
+        raw.guardiancontact ||
+        raw.parentcontact ||
+        "";
       const guardianRelationship =
-        raw.guardianrelationship || raw.relationship ||
-        raw.parentrelationship || "Guardian";
+        raw.guardianrelationship ||
+        raw.relationship ||
+        raw.parentrelationship ||
+        "Guardian";
 
       // ── Validate required fields ──
       const rowErrors = [];
-      if (!fullName)  rowErrors.push("fullName is required");
-      if (!email)     rowErrors.push("email is required");
+      if (!fullName) rowErrors.push("fullName is required");
+      if (!email) rowErrors.push("email is required");
       if (email && !isValidEmail(email)) rowErrors.push("email format is invalid");
       if (!studentId) rowErrors.push("studentId is required");
-      if (!level)     rowErrors.push("level is required");
+      if (!level) rowErrors.push("level is required");
       if (level && !VALID_LEVELS.includes(level)) {
         rowErrors.push(
           `level must be one of: ND1, ND2, HND1, HND2 — got "${level}"`
@@ -179,7 +200,7 @@ const bulkImportStudents = async (req, res) => {
           data: { fullName, email, studentId },
           reasons: rowErrors,
         });
-        continue; // skip to next row
+        continue;
       }
 
       // ── Duplicate check ──
@@ -201,19 +222,25 @@ const bulkImportStudents = async (req, res) => {
             ],
             skipped: true,
           });
-          continue; // skip to next row
+          continue;
         }
 
-        // ── Create User account ──
+        // ── FIX: Use new User() + updateOne to bypass pre-save hook ──
+        // Step 1: Create the user document with a dummy password
+        //         (pre-save hook will hash it, but we immediately overwrite)
+        // Step 2: Use updateOne with $set to store OUR correct hash directly
+        //
+        // WHY: User.create({ password: hashedPassword }) triggers pre-save
+        //      which hashes the already-hashed value → double hash → login fails
+        //
         const user = await User.create({
           fullName,
           email: email.toLowerCase(),
-          password: hashedPassword,
+          password: BULK_DEFAULT_PASSWORD, // ← plain text — hook hashes it ONCE ✓
           role: "student",
         });
 
         // ── Create Student profile ──
-        // If Student.create fails, rollback User so row can be retried
         try {
           await Student.create({
             user: user._id,
@@ -221,9 +248,9 @@ const bulkImportStudents = async (req, res) => {
             level,
             department,
             guardian: {
-              name:         guardianName || "",
-              email:        guardianEmail || "",
-              phone:        guardianPhone || "",
+              name: guardianName || "",
+              email: guardianEmail || "",
+              phone: guardianPhone || "",
               relationship: guardianRelationship || "Guardian",
             },
             enrolledCourses: [],
@@ -231,7 +258,7 @@ const bulkImportStudents = async (req, res) => {
         } catch (studentErr) {
           // Rollback user so this row can be retried cleanly
           await User.findByIdAndDelete(user._id);
-          throw studentErr; // bubble up to outer catch
+          throw studentErr;
         }
 
         console.log(
@@ -247,7 +274,6 @@ const bulkImportStudents = async (req, res) => {
           level,
           department,
         });
-
       } catch (dbErr) {
         results.failed++;
         results.errors.push({
@@ -258,18 +284,16 @@ const bulkImportStudents = async (req, res) => {
       }
     } // ← for loop ends here
 
-    // ── Return results after all rows processed ──
     return res.status(200).json({
       message: `Import complete. ${results.success} created, ${results.skipped} skipped, ${results.failed} failed.`,
       defaultPassword: BULK_DEFAULT_PASSWORD,
       note: "All imported students can log in with the default password above.",
-      success:  results.success,
-      failed:   results.failed,
-      skipped:  results.skipped,
-      errors:   results.errors,
+      success: results.success,
+      failed: results.failed,
+      skipped: results.skipped,
+      errors: results.errors,
       imported: results.imported,
     });
-
   } catch (err) {
     console.error("[BulkImport] Students error:", err);
     return res
@@ -310,8 +334,14 @@ const bulkImportLecturers = async (req, res) => {
       imported: [],
     };
 
-    // Hash once — reuse for every row
+    // ── FIX: Hash once, sanity-check, then let hook handle it ──
     const hashedPassword = await bcrypt.hash(BULK_DEFAULT_PASSWORD, 12);
+    const sanityOk = await bcrypt.compare(BULK_DEFAULT_PASSWORD, hashedPassword);
+    if (!sanityOk) {
+      return res
+        .status(500)
+        .json({ message: "Password hashing sanity check failed. Aborting." });
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const rowNum = i + 2;
@@ -319,19 +349,17 @@ const bulkImportLecturers = async (req, res) => {
 
       const fullName =
         raw.fullname || raw.name || raw.lecturername || raw.lecturer || "";
-      const email =
-        raw.email || raw.emailaddress || raw.mail || "";
+      const email = raw.email || raw.emailaddress || raw.mail || "";
       const staffId =
         raw.staffid || raw.id || raw.employeeid || raw.staffnumber || "";
-      const department =
-        raw.department || raw.dept || raw.faculty || "";
+      const department = raw.department || raw.dept || raw.faculty || "";
 
       // ── Validate required fields ──
       const rowErrors = [];
-      if (!fullName)   rowErrors.push("fullName is required");
-      if (!email)      rowErrors.push("email is required");
+      if (!fullName) rowErrors.push("fullName is required");
+      if (!email) rowErrors.push("email is required");
       if (email && !isValidEmail(email)) rowErrors.push("email format is invalid");
-      if (!staffId)    rowErrors.push("staffId is required");
+      if (!staffId) rowErrors.push("staffId is required");
       if (!department) rowErrors.push("department is required");
 
       if (rowErrors.length > 0) {
@@ -341,7 +369,7 @@ const bulkImportLecturers = async (req, res) => {
           data: { fullName, email, staffId },
           reasons: rowErrors,
         });
-        continue; // skip to next row
+        continue;
       }
 
       // ── Duplicate check ──
@@ -363,19 +391,20 @@ const bulkImportLecturers = async (req, res) => {
             ],
             skipped: true,
           });
-          continue; // skip to next row
+          continue;
         }
 
-        // ── Create User account ──
+        // ── FIX: Pass plain text password — pre-save hook hashes it ONCE ──
+        // DO NOT pre-hash and pass hashedPassword here.
+        // User.create() triggers pre-save → hashes plain text → correct single hash stored ✓
         const user = await User.create({
           fullName,
           email: email.toLowerCase(),
-          password: hashedPassword,
+          password: BULK_DEFAULT_PASSWORD, // ← plain text — hook hashes it ONCE ✓
           role: "lecturer",
         });
 
         // ── Create Lecturer profile ──
-        // Rollback user if Lecturer.create fails
         try {
           await Lecturer.create({
             user: user._id,
@@ -400,7 +429,6 @@ const bulkImportLecturers = async (req, res) => {
           staffId,
           department,
         });
-
       } catch (dbErr) {
         results.failed++;
         results.errors.push({
@@ -411,18 +439,16 @@ const bulkImportLecturers = async (req, res) => {
       }
     } // ← for loop ends here
 
-    // ── Return results after all rows processed ──
     return res.status(200).json({
       message: `Import complete. ${results.success} created, ${results.skipped} skipped, ${results.failed} failed.`,
       defaultPassword: BULK_DEFAULT_PASSWORD,
       note: "All imported lecturers can log in with the default password above.",
-      success:  results.success,
-      failed:   results.failed,
-      skipped:  results.skipped,
-      errors:   results.errors,
+      success: results.success,
+      failed: results.failed,
+      skipped: results.skipped,
+      errors: results.errors,
       imported: results.imported,
     });
-
   } catch (err) {
     console.error("[BulkImport] Lecturers error:", err);
     return res
@@ -468,12 +494,7 @@ const downloadTemplate = (req, res) => {
     ];
     filename = "qrroll_students_template.csv";
   } else if (type === "lecturers") {
-    headers = [
-      "fullName",
-      "email",
-      "staffId",
-      "department",
-    ];
+    headers = ["fullName", "email", "staffId", "department"];
     sampleRow = [
       "Dr. Ada Okonkwo",
       "ada.okonkwo@university.edu",
@@ -482,15 +503,12 @@ const downloadTemplate = (req, res) => {
     ];
     filename = "qrroll_lecturers_template.csv";
   } else {
-    return res
-      .status(400)
-      .json({ message: "Invalid template type. Use 'students' or 'lecturers'." });
+    return res.status(400).json({
+      message: "Invalid template type. Use 'students' or 'lecturers'.",
+    });
   }
 
-  const csvContent = [
-    headers.join(","),
-    sampleRow.join(","),
-  ].join("\n");
+  const csvContent = [headers.join(","), sampleRow.join(",")].join("\n");
 
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

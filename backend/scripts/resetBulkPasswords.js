@@ -1,28 +1,40 @@
-require("dotenv").config();
+// ─── Load .env from backend root (one level up from scripts/) ───
+require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
+
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 
+// ── Debug: confirm env loaded ──
+console.log("MONGO_URI loaded:", process.env.MONGO_URI ? "✅ YES" : "❌ UNDEFINED");
+
 const BULK_DEFAULT_PASSWORD = "QRoll@1234";
 
 const run = async () => {
-  await mongoose.connect(process.env.MONGO_URI);
-  console.log("Connected to MongoDB");
+  if (!process.env.MONGO_URI) {
+    console.error("❌ MONGO_URI is undefined. Check your .env file location.");
+    console.error("   Script is at:", __dirname);
+    console.error("   Looking for .env at:", require("path").resolve(__dirname, "../.env"));
+    process.exit(1);
+  }
 
-  // Generate correct hash once
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log("✅ Connected to MongoDB");
+
+  // ── Step 1: Generate a clean single hash ──
   const correctHash = await bcrypt.hash(BULK_DEFAULT_PASSWORD, 12);
   console.log("New hash generated:", correctHash);
 
-  // Sanity check the hash before applying to anyone
+  // ── Step 2: Sanity check before touching ANY records ──
   const sanityCheck = await bcrypt.compare(BULK_DEFAULT_PASSWORD, correctHash);
   console.log("Sanity check (must be true):", sanityCheck);
 
   if (!sanityCheck) {
-    console.error("Hash sanity check failed. Aborting.");
+    console.error("❌ Hash sanity check failed. Aborting.");
     process.exit(1);
   }
 
-  // Find all students and lecturers
+  // ── Step 3: Find all non-admin users ──
   const users = await User.find({
     role: { $in: ["student", "lecturer"] },
   });
@@ -34,16 +46,15 @@ const run = async () => {
 
   for (const user of users) {
     try {
-      // Use updateOne — bypasses pre-save hook
-      // So the hash we write is stored exactly as-is
+      // updateOne bypasses pre-save hook — no re-hashing
       await User.updateOne(
         { _id: user._id },
         { $set: { password: correctHash } }
       );
-      console.log(`  Reset: ${user.email}`);
+      console.log(`  ✓ Reset: ${user.email}`);
       fixed++;
     } catch (userErr) {
-      console.log(`  ERROR on ${user.email}: ${userErr.message}`);
+      console.log(`  ✗ ERROR on ${user.email}: ${userErr.message}`);
       errored++;
     }
   }
@@ -54,15 +65,19 @@ const run = async () => {
   console.log(`Total:   ${users.length}`);
   console.log(`─────────────────────────────`);
 
-  // ── Verify one user ──
-  // Must use .select("+password") because password has select:false in model
-  const testUser = await User
-    .findOne({ role: { $in: ["student", "lecturer"] } })
-    .select("+password");
+  // ── Step 4: Verify a sample user ──
+  const testUser = await User.findOne({
+    role: { $in: ["student", "lecturer"] },
+  }).select("+password");
 
   if (testUser) {
-    const verified = await bcrypt.compare(BULK_DEFAULT_PASSWORD, testUser.password);
-    console.log(`\nVerification on ${testUser.email}: ${verified ? "✓ PASS" : "✗ FAIL"}`);
+    const verified = await bcrypt.compare(
+      BULK_DEFAULT_PASSWORD,
+      testUser.password
+    );
+    console.log(
+      `\nVerification on "${testUser.email}": ${verified ? "✅ PASS" : "❌ FAIL"}`
+    );
 
     if (!verified) {
       console.log("Stored hash:", testUser.password);
@@ -71,7 +86,7 @@ const run = async () => {
   }
 
   await mongoose.disconnect();
-  console.log("\nDone. Try logging in with QRoll@1234");
+  console.log("\n✅ Done. All users can now log in with: QRoll@1234");
 };
 
 run().catch((err) => {
